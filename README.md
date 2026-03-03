@@ -147,11 +147,15 @@ cd Tenantrix
 python -m venv .venv
 source .venv/bin/activate
 
-# Install dependencies
+# Install production dependencies
 pip install -r requirements.txt
+
+# (Optional) Install dev/test dependencies too
+pip install -r requirements-dev.txt
 
 # Copy and fill environment variables
 cp .env.example .env
+# Edit .env and set your POSTGRES_* credentials and SECRET_KEY
 
 # Run migrations
 alembic upgrade head
@@ -160,6 +164,8 @@ alembic upgrade head
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+> ⚠️ Always use the venv's uvicorn (`source .venv/bin/activate` first, or use `.venv/bin/uvicorn` directly) — running bare `uvicorn` from your system Python will fail if packages are only installed in the venv.
+
 ---
 
 ## 📂 Project Structure
@@ -167,80 +173,60 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 Tenantrix/
 ├── app/
-│   ├── main.py                    # FastAPI app factory
+│   ├── main.py                    # FastAPI app factory + rate limiter
 │   ├── core/
 │   │   ├── config.py              # Pydantic settings (.env)
-│   │   ├── security.py            # JWT + bcrypt helpers
-│   │   ├── deps.py                # FastAPI dependencies
-│   │   ├── pagination.py          # Offset pagination helper
-│   │   ├── errors.py              # Global error handlers
-│   │   └── logging.py             # Structured JSON logging
+│   │   └── security.py            # JWT + bcrypt helpers
+│   ├── api/
+│   │   ├── deps.py                # FastAPI dependencies + RBAC helpers
+│   │   └── v1/
+│   │       ├── router.py          # Aggregates all sub-routers
+│   │       ├── health.py          # Health check endpoint
+│   │       ├── auth.py            # Auth endpoints (register/login/refresh/logout/me)
+│   │       ├── organizations.py   # Org + invite + member endpoints
+│   │       └── projects.py        # Project CRUD endpoints
 │   ├── db/
-│   │   ├── base.py                # DeclarativeBase + mixins
-│   │   ├── session.py             # Engine + SessionLocal
-│   │   └── models/
-│   │       ├── user.py
-│   │       ├── org.py
-│   │       ├── membership.py
-│   │       ├── invite.py
-│   │       ├── project.py
-│   │       ├── task.py
-│   │       ├── comment.py
-│   │       ├── label.py
-│   │       ├── audit.py
-│   │       ├── token.py
-│   │       └── idempotency.py
-│   ├── schemas/
-│   │   ├── auth.py
-│   │   ├── orgs.py
-│   │   ├── projects.py
-│   │   ├── tasks.py
-│   │   ├── comments.py
-│   │   └── audit.py
-│   ├── routers/
-│   │   ├── auth.py
-│   │   ├── orgs.py
-│   │   ├── projects.py
-│   │   ├── tasks.py
-│   │   ├── comments.py
-│   │   └── audit.py
-│   ├── services/
-│   │   ├── auth.py
-│   │   ├── orgs.py
-│   │   ├── projects.py
-│   │   ├── tasks.py
-│   │   └── audit.py
-│   ├── middlewares/
-│   │   ├── request_id.py
-│   │   └── rate_limit.py
-│   └── utils/
-│       ├── time.py
-│       └── uuid.py
-├── migrations/                    # Alembic migrations
+│   │   ├── base.py                # DeclarativeBase + UUIDMixin + TimestampMixin
+│   │   └── session.py             # Engine + SessionLocal + get_db
+│   ├── models/
+│   │   ├── __init__.py            # Imports all models (Alembic discovery)
+│   │   ├── user.py
+│   │   ├── organization.py
+│   │   ├── membership.py          # OrgRole + MembershipStatus enums
+│   │   ├── invite.py
+│   │   ├── refresh_token.py
+│   │   ├── project.py             # ProjectStatus enum
+│   │   ├── task.py                # TaskStatus + TaskPriority enums, SoftDelete
+│   │   ├── comment.py
+│   │   ├── label.py
+│   │   ├── task_label.py
+│   │   ├── audit_log.py
+│   │   └── idempotency_key.py
+│   └── schemas/
+│       ├── auth.py                # Register/Login/Token/Me schemas
+│       ├── organization.py        # Org + Invite + Member schemas
+│       └── project.py             # Project create/update/response schemas
+├── alembic/                       # Alembic migrations
 │   ├── env.py
 │   ├── script.py.mako
 │   └── versions/
 ├── tests/
-│   ├── conftest.py
-│   ├── factories/
+│   ├── conftest.py                # DB fixtures + TestClient
+│   ├── test_health.py
+│   ├── test_models.py
 │   ├── test_auth.py
-│   ├── test_orgs.py
-│   ├── test_projects.py
-│   ├── test_tasks.py
-│   ├── test_comments.py
-│   └── test_audit.py
+│   ├── test_organizations.py
+│   └── test_projects.py
 ├── .env.example
 ├── .env                           # Never committed
 ├── docker-compose.yml
 ├── Dockerfile
 ├── pyproject.toml
-├── requirements.txt
-├── requirements-dev.txt
+├── requirements.txt               # Production dependencies
+├── requirements-dev.txt           # Dev + test dependencies
+├── Makefile
 ├── alembic.ini
-├── README.md
-├── ARCHITECTURE.md
-├── API.md
-└── CHANGELOG.md
+└── README.md
 ```
 
 ---
@@ -248,74 +234,66 @@ Tenantrix/
 ## 🔧 Environment Variables
 
 ```bash
-# App
-APP_NAME=Tenantrix
-APP_ENV=development
-DEBUG=true
-SECRET_KEY=your-super-secret-key-change-in-production
-API_V1_PREFIX=/api/v1
-
 # Database
-DATABASE_URL=postgresql://postgres:password@localhost:5432/tenantrix
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your-db-password
+POSTGRES_DB=tenantrix
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+DATABASE_URL=postgresql://postgres:your-db-password@localhost:5432/tenantrix
 
-# JWT
-JWT_ALGORITHM=HS256
+# Security — generate with: python -c "import secrets; print(secrets.token_hex(32))"
+SECRET_KEY=change-me-to-a-random-64-char-hex-string
+ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=15
-REFRESH_TOKEN_EXPIRE_DAYS=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
 
-# Rate Limiting
-RATE_LIMIT_AUTH=5/minute
+# Application
+ENVIRONMENT=development
+VERSION=0.1.0
+DEBUG=false
 
-# Logging
-LOG_LEVEL=INFO
-LOG_FORMAT=json
+# Rate limiting (requests per minute per IP)
+RATE_LIMIT_PER_MINUTE=60
+
+# CORS — comma-separated allowed origins
+CORS_ORIGINS=http://localhost:3000,http://localhost:5173
 ```
 
-See `.env.example` for the full list.
+See `.env.example` for the full list with comments.
 
 ---
 
 ## 📡 API Reference
 
 Base URL: `/api/v1`  
-Full API documentation: [`API.md`](API.md)  
-Interactive docs (when running): `http://localhost:8000/docs`
+Interactive docs (when running): `http://localhost:8000/docs`  
+Alternative docs: `http://localhost:8000/redoc`
 
 ### Endpoint Summary
 
 | Group | Method | Path | Description |
 |---|---|---|---|
+| **System** | GET | `/health` | Health check |
 | **Auth** | POST | `/auth/register` | Register new user |
 | | POST | `/auth/login` | Login, get tokens |
 | | POST | `/auth/refresh` | Rotate refresh token |
 | | POST | `/auth/logout` | Revoke refresh token |
 | | GET | `/auth/me` | Get current user |
-| **Orgs** | POST | `/orgs` | Create organization |
-| | GET | `/orgs` | List my organizations |
-| | GET | `/orgs/{org_id}` | Get org details |
-| | POST | `/orgs/{org_id}/invites` | Invite member |
-| | POST | `/orgs/{org_id}/invites/accept` | Accept invite |
-| | GET | `/orgs/{org_id}/members` | List members |
-| | PATCH | `/orgs/{org_id}/members/{user_id}` | Update member role |
-| | DELETE | `/orgs/{org_id}/members/{user_id}` | Remove member |
-| **Projects** | POST | `/orgs/{org_id}/projects` | Create project |
-| | GET | `/orgs/{org_id}/projects` | List projects |
-| | GET | `/orgs/{org_id}/projects/{project_id}` | Get project |
-| | PATCH | `/orgs/{org_id}/projects/{project_id}` | Update project |
-| | DELETE | `/orgs/{org_id}/projects/{project_id}` | Archive project |
-| **Tasks** | POST | `/orgs/{org_id}/projects/{project_id}/tasks` | Create task |
-| | GET | `/orgs/{org_id}/projects/{project_id}/tasks` | List tasks |
-| | GET | `/orgs/{org_id}/tasks/{task_id}` | Get task |
-| | PATCH | `/orgs/{org_id}/tasks/{task_id}` | Update task |
-| | DELETE | `/orgs/{org_id}/tasks/{task_id}` | Soft delete task |
-| | POST | `/orgs/{org_id}/tasks/{task_id}/labels` | Add labels |
-| | DELETE | `/orgs/{org_id}/tasks/{task_id}/labels/{label_name}` | Remove label |
-| **Comments** | POST | `/orgs/{org_id}/tasks/{task_id}/comments` | Add comment |
-| | GET | `/orgs/{org_id}/tasks/{task_id}/comments` | List comments |
-| | PATCH | `/orgs/{org_id}/comments/{comment_id}` | Edit comment |
-| | DELETE | `/orgs/{org_id}/comments/{comment_id}` | Delete comment |
-| **Audit** | GET | `/orgs/{org_id}/audit` | List audit logs |
-| **System** | GET | `/health` | Health check |
+| **Organizations** | POST | `/organizations` | Create organization |
+| | GET | `/organizations/{org_id}` | Get org details |
+| | POST | `/organizations/{org_id}/invites` | Invite member by email |
+| | POST | `/organizations/invites/accept/{token}` | Accept invite |
+| | GET | `/organizations/{org_id}/members` | List members |
+| | PATCH | `/organizations/{org_id}/members/{user_id}/role` | Update member role |
+| | DELETE | `/organizations/{org_id}/members/{user_id}` | Remove member |
+| **Projects** | POST | `/organizations/{org_id}/projects` | Create project |
+| | GET | `/organizations/{org_id}/projects` | List projects |
+| | GET | `/organizations/{org_id}/projects/{project_id}` | Get project |
+| | PATCH | `/organizations/{org_id}/projects/{project_id}` | Update project |
+| | DELETE | `/organizations/{org_id}/projects/{project_id}` | Delete project |
+
+> All routes are prefixed with `/api/v1`. Interactive docs: `http://localhost:8000/docs`
 
 ---
 
@@ -421,16 +399,16 @@ See `.github/workflows/ci.yml` for full configuration.
 
 | Milestone | Status | Description |
 |---|---|---|
-| M0 — Skeleton | 🔜 | Project setup, DB, health endpoint |
-| M1 — Auth | 🔜 | Register, login, JWT, refresh tokens |
-| M2 — Orgs & Members | 🔜 | Orgs, invites, RBAC |
-| M3 — Projects | 🔜 | Project CRUD + archive |
-| M4 — Tasks | 🔜 | Task CRUD + filters + labels |
-| M5 — Comments | 🔜 | Comments + soft delete |
-| M6 — Audit Logs | 🔜 | Audit trail |
-| M7 — Production Features | 🔜 | Idempotency, request ID, logging |
-| M8 — Testing & Hardening | 🔜 | Full test suite, RBAC tests |
-| M9 — Docker & CI | 🔜 | Dockerfile, compose, GitHub Actions |
+| M0 — Skeleton | ✅ Done | Project setup, Docker, CI, health endpoint |
+| M1 — Models & Migrations | ✅ Done | 12 ORM models, Alembic migration |
+| M2 — Auth | ✅ Done | Register, login, JWT, refresh tokens with rotation |
+| M3 — Org Management | ✅ Done | Orgs, invites, member RBAC (OWNER/ADMIN/MEMBER/VIEWER) |
+| M4 — Projects | ✅ Done | Project CRUD + archive (5 endpoints, 28 tests) |
+| M5 — Tasks | 🔜 Next | Task CRUD + status workflow + filters + labels |
+| M6 — Comments | 🔜 | Comments + soft delete |
+| M7 — Audit Logs | 🔜 | Immutable audit trail |
+| M8 — Production Features | 🔜 | Idempotency keys, request ID middleware, structured logging |
+| M9 — Docker & CI | 🔜 | Full Docker Compose, GitHub Actions hardening |
 
 ---
 

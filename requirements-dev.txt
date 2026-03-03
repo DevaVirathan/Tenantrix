@@ -1,0 +1,16 @@
+# ============================================================
+# Tenantrix — Development & Testing Dependencies
+# ============================================================
+
+# Install production deps first
+-r requirements.txt
+
+# Testing
+pytest==8.4.2
+pytest-cov==7.0.0
+httpx==0.28.1
+
+# Linting & Formatting
+ruff==0.15.4
+black==26.1.0
+mypy==1.19.1

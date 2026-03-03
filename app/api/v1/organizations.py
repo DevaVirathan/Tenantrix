@@ -50,7 +50,7 @@ def _slugify(name: str) -> str:
 def create_organization(
     body: OrgCreateRequest,
     current_user: CurrentUser,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ) -> OrgOut:
     # Check slug uniqueness
     existing = db.scalar(select(Organization).where(Organization.slug == body.slug))
@@ -102,11 +102,13 @@ def get_organization(
 @router.get("/{org_id}/members", response_model=list[MemberOut])
 def list_members(
     org_and_membership: OrgMember,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ) -> list[MemberOut]:
     org, _ = org_and_membership
     rows = (
-        db.query(Membership).filter_by(organization_id=org.id, status=MembershipStatus.ACTIVE).all()
+        db.query(Membership)
+        .filter_by(organization_id=org.id, status=MembershipStatus.ACTIVE)
+        .all()
     )
     return [
         MemberOut(
@@ -132,7 +134,7 @@ def list_members(
 def create_invite(
     body: InviteCreateRequest,
     org_and_membership: OrgAdmin,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ) -> InviteOut:
     org, _ = org_and_membership
 
@@ -140,12 +142,11 @@ def create_invite(
     target_user = db.scalar(select(User).where(User.email == body.email))
     if target_user is not None:
         existing_membership = (
-            db.query(Membership).filter_by(organization_id=org.id, user_id=target_user.id).first()
+            db.query(Membership)
+            .filter_by(organization_id=org.id, user_id=target_user.id)
+            .first()
         )
-        if (
-            existing_membership is not None
-            and existing_membership.status == MembershipStatus.ACTIVE
-        ):
+        if existing_membership is not None and existing_membership.status == MembershipStatus.ACTIVE:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="User is already a member of this organisation.",
@@ -187,7 +188,7 @@ def create_invite(
 def accept_invite(
     token: str = Path(...),
     current_user: CurrentUser = ...,  # type: ignore[assignment]
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ) -> OrgOut:
     invite = db.scalar(select(Invite).where(Invite.token == token))
 
@@ -248,7 +249,7 @@ def change_member_role(
     user_id: uuid.UUID,
     body: MemberRoleUpdateRequest,
     org_and_membership: OrgAdmin,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ) -> MemberOut:
     org, acting_membership = org_and_membership
 
@@ -258,7 +259,11 @@ def change_member_role(
             detail="Cannot change your own role.",
         )
 
-    target = db.query(Membership).filter_by(organization_id=org.id, user_id=user_id).first()
+    target = (
+        db.query(Membership)
+        .filter_by(organization_id=org.id, user_id=user_id)
+        .first()
+    )
     if target is None or target.status != MembershipStatus.ACTIVE:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found.")
 
@@ -294,7 +299,7 @@ def change_member_role(
 def remove_member(
     user_id: uuid.UUID,
     org_and_membership: OrgAdmin,
-    db: Session = Depends(get_db),  # noqa: B008
+    db: Session = Depends(get_db),
 ) -> None:
     org, acting_membership = org_and_membership
 
@@ -304,7 +309,11 @@ def remove_member(
             detail="Cannot remove yourself. Transfer ownership first.",
         )
 
-    target = db.query(Membership).filter_by(organization_id=org.id, user_id=user_id).first()
+    target = (
+        db.query(Membership)
+        .filter_by(organization_id=org.id, user_id=user_id)
+        .first()
+    )
     if target is None or target.status != MembershipStatus.ACTIVE:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found.")
 
