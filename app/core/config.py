@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import secrets
 
 
 class Settings(BaseSettings):
@@ -38,10 +39,17 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------ #
     # Security                                                             #
     # ------------------------------------------------------------------ #
-    SECRET_KEY: str
+    SECRET_KEY: str = ""
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    @model_validator(mode="after")
+    def ensure_secret_key(self) -> Settings:
+        """Generate a SECRET_KEY when not provided (convenience for local/dev)."""
+        if not self.SECRET_KEY:
+            self.SECRET_KEY = secrets.token_urlsafe(32)
+        return self
 
     # ------------------------------------------------------------------ #
     # Application                                                          #
