@@ -1,0 +1,106 @@
+# =============================================================================
+# Tenantrix — .gitignore
+# =============================================================================
+
+# ---------------------------
+# Python
+# ---------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+wheels/
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ---------------------------
+# Virtual Environments
+# ---------------------------
+.venv/
+venv/
+env/
+ENV/
+.env.bak
+
+# ---------------------------
+# Environment / Secrets
+# ---------------------------
+.env
+!.env.example
+
+# ---------------------------
+# Testing & Coverage
+# ---------------------------
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.tox/
+nosetests.xml
+
+# ---------------------------
+# Type Checking
+# ---------------------------
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+
+# ---------------------------
+# Linters / Formatters
+# ---------------------------
+.ruff_cache/
+
+# ---------------------------
+# IDE / Editor
+# ---------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# ---------------------------
+# OS artifacts
+# ---------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ---------------------------
+# Docker
+# ---------------------------
+.docker/
+
+# ---------------------------
+# Alembic
+# ---------------------------
+# Keep the versions dir but ignore generated migrations during dev
+# (remove this if you want migrations tracked in git)
+# alembic/versions/*.py
+
+# ---------------------------
+# Misc
+# ---------------------------
+*.log
+*.pid
+*.seed
+*.gz
+*.bak
+.hypothesis/
