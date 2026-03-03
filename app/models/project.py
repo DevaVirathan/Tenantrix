@@ -41,9 +41,7 @@ class Project(UUIDMixin, TimestampMixin, Base):
     )
 
     # Relationships
-    organization: Mapped[Organization] = relationship(
-        "Organization", back_populates="projects"
-    )
+    organization: Mapped[Organization] = relationship("Organization", back_populates="projects")
     tasks: Mapped[list[Task]] = relationship("Task", back_populates="project")
 
     def __repr__(self) -> str:

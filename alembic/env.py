@@ -5,19 +5,18 @@ import os
 import sys
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
+
+from alembic import context
 
 # Ensure the project root is on sys.path so 'app' can be imported
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # Import Base FIRST so all ORM models are registered
-from app.db.base import Base  # noqa: E402
-
 # Import all models so Alembic knows about every table.
 import app.models  # noqa: F401
-
-from app.core.config import settings  # noqa: E402
+from app.core.config import settings
+from app.db.base import Base
 
 # --------------------------------------------------------------------------- #
 # Alembic Config object                                                       #

@@ -18,9 +18,7 @@ if TYPE_CHECKING:
 
 class Label(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "labels"
-    __table_args__ = (
-        UniqueConstraint("organization_id", "name", name="uq_label_org_name"),
-    )
+    __table_args__ = (UniqueConstraint("organization_id", "name", name="uq_label_org_name"),)
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
@@ -29,15 +27,11 @@ class Label(UUIDMixin, TimestampMixin, Base):
         index=True,
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    color: Mapped[str | None] = mapped_column(
-        String(7), nullable=True
-    )  # hex color e.g. "#FF5733"
+    color: Mapped[str | None] = mapped_column(String(7), nullable=True)  # hex color e.g. "#FF5733"
 
     # Relationships
     organization: Mapped[Organization] = relationship("Organization")
-    task_labels: Mapped[list[TaskLabel]] = relationship(
-        "TaskLabel", back_populates="label"
-    )
+    task_labels: Mapped[list[TaskLabel]] = relationship("TaskLabel", back_populates="label")
 
     def __repr__(self) -> str:
         return f"<Label id={self.id} name={self.name!r}>"
