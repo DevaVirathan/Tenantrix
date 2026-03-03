@@ -417,7 +417,7 @@ See `.github/workflows/ci.yml` for full configuration.
 
 ---
 
-## 📅 Roadmap
+##  Roadmap
 
 | Milestone | Status | Description |
 |---|---|---|
@@ -434,7 +434,7 @@ See `.github/workflows/ci.yml` for full configuration.
 
 ---
 
-## 🤝 Contributing
+##  Contributing
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feat/my-feature`
@@ -446,7 +446,7 @@ Please follow the [Conventional Commits](https://www.conventionalcommits.org/) s
 
 ---
 
-## 📄 License
+##  License
 
 MIT License — see [LICENSE](LICENSE) for details.
 
