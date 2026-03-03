@@ -1,0 +1,85 @@
+# =============================================================================
+# Tenantrix — Docker Compose
+# Services: api | db | test
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: tenantrix
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tenantrix"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # API — FastAPI application
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db:5432/tenantrix
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # Mount source for hot reload in development
+      - ./app:/app/app
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+
+  # ---------------------------------------------------------------------------
+  # Test runner — uses a separate test database
+  # ---------------------------------------------------------------------------
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db:5432/tenantrix_test
+      ENVIRONMENT: test
+      SECRET_KEY: test-secret-key-not-for-production
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./app:/build/app
+      - ./tests:/build/tests
+      - ./alembic:/build/alembic
+      - ./alembic.ini:/build/alembic.ini
+    command: >
+      sh -c "
+        python -m pytest tests/ -v --tb=short --cov=app --cov-report=term-missing
+      "
+    profiles:
+      - test
+
+volumes:
+  postgres_data:
