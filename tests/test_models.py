@@ -60,7 +60,12 @@ def test_metadata_tables_match_expected():
 
 
 def test_org_role_values():
-    assert set(OrgRole) == {OrgRole.OWNER, OrgRole.ADMIN, OrgRole.MEMBER, OrgRole.VIEWER}
+    assert set(OrgRole) == {
+        OrgRole.OWNER,
+        OrgRole.ADMIN,
+        OrgRole.MEMBER,
+        OrgRole.VIEWER,
+    }
 
 
 def test_membership_status_values():

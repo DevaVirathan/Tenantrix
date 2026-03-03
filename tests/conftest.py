@@ -9,7 +9,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, text
 
 # Set test env before importing app modules
-os.environ.setdefault("DATABASE_URL", "postgresql://postgres:123456@localhost:5432/tenantrix_test")
+os.environ.setdefault(
+    "DATABASE_URL", "postgresql://postgres:123456@localhost:5432/tenantrix_test"
+)
 os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production-only")
 os.environ.setdefault("ENVIRONMENT", "test")
 

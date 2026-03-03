@@ -119,7 +119,9 @@ def login(body: LoginRequest, db: DB) -> TokenPair:
 def refresh(body: RefreshRequest, db: DB) -> AccessTokenOut:
     token_hash = hash_refresh_token(body.refresh_token)
 
-    stored = db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()
+    stored = (
+        db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()
+    )
 
     if stored is None:
         raise HTTPException(
@@ -129,9 +131,9 @@ def refresh(body: RefreshRequest, db: DB) -> AccessTokenOut:
 
     # Reuse detection — if already revoked, invalidate entire family
     if stored.revoked:
-        db.query(RefreshToken).filter(RefreshToken.family_id == stored.family_id).update(
-            {"revoked": True, "revoked_at": datetime.now(UTC)}
-        )
+        db.query(RefreshToken).filter(
+            RefreshToken.family_id == stored.family_id
+        ).update({"revoked": True, "revoked_at": datetime.now(UTC)})
         db.commit()  # commit the family wipe BEFORE raising so it persists
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -185,7 +187,9 @@ def refresh(body: RefreshRequest, db: DB) -> AccessTokenOut:
 def logout(body: LogoutRequest, db: DB) -> MessageOut:
     token_hash = hash_refresh_token(body.refresh_token)
 
-    stored = db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()
+    stored = (
+        db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()
+    )
 
     if stored and not stored.revoked:
         stored.revoked = True

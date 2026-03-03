@@ -25,10 +25,16 @@ class RefreshToken(UUIDMixin, TimestampMixin, Base):
         nullable=False,
         index=True,
     )
-    token_hash: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    token_hash: Mapped[str] = mapped_column(
+        String(255), unique=True, nullable=False, index=True
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
     revoked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     # reuse detection — track the family chain
     family_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True), nullable=False, default=uuid.uuid4, index=True

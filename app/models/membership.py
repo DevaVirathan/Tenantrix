@@ -58,7 +58,9 @@ class Membership(UUIDMixin, TimestampMixin, Base):
     )
 
     # Relationships
-    organization: Mapped[Organization] = relationship("Organization", back_populates="memberships")
+    organization: Mapped[Organization] = relationship(
+        "Organization", back_populates="memberships"
+    )
     user: Mapped[User] = relationship("User", back_populates="memberships")
 
     def __repr__(self) -> str:

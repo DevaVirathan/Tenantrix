@@ -20,7 +20,9 @@ class TaskLabel(Base):
     """Pure association table — no surrogate PK, no timestamps."""
 
     __tablename__ = "task_labels"
-    __table_args__ = (PrimaryKeyConstraint("task_id", "label_id", name="pk_task_label"),)
+    __table_args__ = (
+        PrimaryKeyConstraint("task_id", "label_id", name="pk_task_label"),
+    )
 
     task_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
