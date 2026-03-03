@@ -1,4 +1,5 @@
 """Comment model — task comments with soft delete."""
+
 from __future__ import annotations
 
 import uuid

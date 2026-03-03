@@ -1,4 +1,5 @@
 """Security utilities — password hashing, JWT tokens, refresh tokens."""
+
 from __future__ import annotations
 
 import hashlib

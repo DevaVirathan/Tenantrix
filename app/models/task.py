@@ -1,4 +1,5 @@
 """Task model — the core work-item entity."""
+
 from __future__ import annotations
 
 import enum
@@ -78,7 +79,9 @@ class Task(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
         "User", foreign_keys=[assignee_user_id]
     )
     comments: Mapped[list[Comment]] = relationship("Comment", back_populates="task")
-    task_labels: Mapped[list[TaskLabel]] = relationship("TaskLabel", back_populates="task")
+    task_labels: Mapped[list[TaskLabel]] = relationship(
+        "TaskLabel", back_populates="task"
+    )
 
     def __repr__(self) -> str:
         return f"<Task id={self.id} title={self.title!r} status={self.status}>"

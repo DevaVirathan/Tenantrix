@@ -1,4 +1,5 @@
 """AuditLog model — immutable event log per organization."""
+
 from __future__ import annotations
 
 import uuid

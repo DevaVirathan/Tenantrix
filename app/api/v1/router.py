@@ -1,4 +1,5 @@
 """API v1 — main router that aggregates all sub-routers."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter

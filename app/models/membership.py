@@ -1,4 +1,5 @@
 """Membership model — links users to organizations with a role."""
+
 from __future__ import annotations
 
 import enum

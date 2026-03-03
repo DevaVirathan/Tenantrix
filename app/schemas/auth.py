@@ -1,4 +1,5 @@
 """Pydantic schemas for the auth endpoints."""
+
 from __future__ import annotations
 
 import uuid
@@ -51,6 +52,7 @@ class UserOut(BaseModel):
 
 class TokenPair(BaseModel):
     """Returned on login and refresh."""
+
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
@@ -59,6 +61,7 @@ class TokenPair(BaseModel):
 
 class AccessTokenOut(BaseModel):
     """Returned on /refresh — new access token only (+ new refresh token)."""
+
     access_token: str
     refresh_token: str
     token_type: str = "bearer"

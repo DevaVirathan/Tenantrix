@@ -1,4 +1,5 @@
 """Auth endpoints — register, login, refresh, logout, me."""
+
 from __future__ import annotations
 
 import uuid
@@ -119,9 +120,7 @@ def refresh(body: RefreshRequest, db: DB) -> AccessTokenOut:
     token_hash = hash_refresh_token(body.refresh_token)
 
     stored = (
-        db.query(RefreshToken)
-        .filter(RefreshToken.token_hash == token_hash)
-        .first()
+        db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()
     )
 
     if stored is None:
@@ -189,9 +188,7 @@ def logout(body: LogoutRequest, db: DB) -> MessageOut:
     token_hash = hash_refresh_token(body.refresh_token)
 
     stored = (
-        db.query(RefreshToken)
-        .filter(RefreshToken.token_hash == token_hash)
-        .first()
+        db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()
     )
 
     if stored and not stored.revoked:

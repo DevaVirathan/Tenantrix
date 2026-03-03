@@ -1,4 +1,5 @@
 """Database engine, session factory, and FastAPI dependency."""
+
 from __future__ import annotations
 
 from collections.abc import Generator
@@ -10,7 +11,7 @@ from app.core.config import settings
 
 engine = create_engine(
     settings.DATABASE_URL,
-    pool_pre_ping=True,   # verify connection health before use
+    pool_pre_ping=True,  # verify connection health before use
     pool_size=10,
     max_overflow=20,
     echo=settings.DEBUG,

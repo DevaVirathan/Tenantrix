@@ -1,4 +1,5 @@
 """SQLAlchemy declarative base and reusable ORM mixins."""
+
 from __future__ import annotations
 
 import uuid
@@ -14,6 +15,7 @@ class Base(DeclarativeBase):
 
 class UUIDMixin:
     """Primary key as a UUID, generated server-side by Python."""
+
     id: Mapped[uuid.UUID] = mapped_column(
         primary_key=True,
         default=uuid.uuid4,
@@ -23,6 +25,7 @@ class UUIDMixin:
 
 class TimestampMixin:
     """Automatic created_at / updated_at columns."""
+
     created_at: Mapped[datetime] = mapped_column(
         server_default=func.now(),
         sort_order=100,
@@ -36,6 +39,7 @@ class TimestampMixin:
 
 class SoftDeleteMixin:
     """Soft-delete support via deleted_at timestamp (NULL = active)."""
+
     deleted_at: Mapped[datetime | None] = mapped_column(
         nullable=True,
         default=None,

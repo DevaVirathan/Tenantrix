@@ -1,4 +1,5 @@
 """FastAPI application factory and lifecycle management."""
+
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
@@ -16,7 +17,10 @@ from app.core.config import settings
 # --------------------------------------------------------------------------- #
 # Rate limiter (global, keyed by remote IP)                                   #
 # --------------------------------------------------------------------------- #
-limiter = Limiter(key_func=get_remote_address, default_limits=[f"{settings.RATE_LIMIT_PER_MINUTE}/minute"])
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=[f"{settings.RATE_LIMIT_PER_MINUTE}/minute"],
+)
 
 
 # --------------------------------------------------------------------------- #

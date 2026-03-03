@@ -1,4 +1,5 @@
 """M1 tests — verify ORM models and database schema."""
+
 from __future__ import annotations
 
 import uuid
@@ -57,8 +58,14 @@ def test_metadata_tables_match_expected():
 # Enum tests
 # ---------------------------------------------------------------------------
 
+
 def test_org_role_values():
-    assert set(OrgRole) == {OrgRole.OWNER, OrgRole.ADMIN, OrgRole.MEMBER, OrgRole.VIEWER}
+    assert set(OrgRole) == {
+        OrgRole.OWNER,
+        OrgRole.ADMIN,
+        OrgRole.MEMBER,
+        OrgRole.VIEWER,
+    }
 
 
 def test_membership_status_values():
@@ -90,6 +97,7 @@ def test_task_priority_values():
 # ---------------------------------------------------------------------------
 # Model instantiation tests (no DB round-trip needed)
 # ---------------------------------------------------------------------------
+
 
 def test_user_model_instantiation():
     u = User(email="test@example.com", password_hash="hashed")

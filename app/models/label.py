@@ -1,4 +1,5 @@
 """Label model — colored tags scoped to an organization."""
+
 from __future__ import annotations
 
 import uuid
@@ -28,11 +29,15 @@ class Label(UUIDMixin, TimestampMixin, Base):
         index=True,
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    color: Mapped[str | None] = mapped_column(String(7), nullable=True)  # hex color e.g. "#FF5733"
+    color: Mapped[str | None] = mapped_column(
+        String(7), nullable=True
+    )  # hex color e.g. "#FF5733"
 
     # Relationships
     organization: Mapped[Organization] = relationship("Organization")
-    task_labels: Mapped[list[TaskLabel]] = relationship("TaskLabel", back_populates="label")
+    task_labels: Mapped[list[TaskLabel]] = relationship(
+        "TaskLabel", back_populates="label"
+    )
 
     def __repr__(self) -> str:
         return f"<Label id={self.id} name={self.name!r}>"

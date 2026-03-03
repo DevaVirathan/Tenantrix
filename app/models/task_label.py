@@ -1,4 +1,5 @@
 """TaskLabel — association table linking tasks to labels (many-to-many)."""
+
 from __future__ import annotations
 
 import uuid

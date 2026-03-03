@@ -1,4 +1,5 @@
 """IdempotencyKey model — deduplication of mutating requests."""
+
 from __future__ import annotations
 
 import uuid
@@ -22,7 +23,9 @@ class IdempotencyKey(UUIDMixin, Base):
 
     __tablename__ = "idempotency_keys"
     __table_args__ = (
-        UniqueConstraint("organization_id", "user_id", "key", name="uq_idempotency_org_user_key"),
+        UniqueConstraint(
+            "organization_id", "user_id", "key", name="uq_idempotency_org_user_key"
+        ),
     )
 
     created_at: Mapped[DateTime] = mapped_column(
@@ -45,7 +48,9 @@ class IdempotencyKey(UUIDMixin, Base):
     request_path: Mapped[str] = mapped_column(String(500), nullable=False)
     response_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
     response_body: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # Relationships
     organization: Mapped[Organization] = relationship("Organization")

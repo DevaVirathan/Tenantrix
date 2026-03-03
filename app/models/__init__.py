@@ -1,4 +1,5 @@
 """ORM models — import all here so Alembic can discover every table."""
+
 from app.models.audit_log import AuditLog
 from app.models.comment import Comment
 from app.models.idempotency_key import IdempotencyKey

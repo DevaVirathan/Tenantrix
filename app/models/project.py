@@ -1,4 +1,5 @@
 """Project model — a collection of tasks within an organization."""
+
 from __future__ import annotations
 
 import enum

@@ -1,4 +1,5 @@
 """Invite model — org invitation tokens."""
+
 from __future__ import annotations
 
 import uuid
@@ -27,17 +28,23 @@ class Invite(UUIDMixin, TimestampMixin, Base):
         index=True,
     )
     email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    token: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    token: Mapped[str] = mapped_column(
+        String(255), unique=True, nullable=False, index=True
+    )
     role: Mapped[OrgRole] = mapped_column(
         SAEnum(OrgRole, name="orgrole"), nullable=False, default=OrgRole.MEMBER
     )
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
-    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    accepted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # Relationships
-    organization: Mapped[Organization] = relationship("Organization", back_populates="invites")
+    organization: Mapped[Organization] = relationship(
+        "Organization", back_populates="invites"
+    )
 
     def __repr__(self) -> str:
         return f"<Invite org={self.organization_id} email={self.email!r}>"
