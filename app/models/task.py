@@ -75,13 +75,9 @@ class Task(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
     # Relationships
     organization: Mapped[Organization] = relationship("Organization")
     project: Mapped[Project] = relationship("Project", back_populates="tasks")
-    assignee: Mapped[User | None] = relationship(
-        "User", foreign_keys=[assignee_user_id]
-    )
+    assignee: Mapped[User | None] = relationship("User", foreign_keys=[assignee_user_id])
     comments: Mapped[list[Comment]] = relationship("Comment", back_populates="task")
-    task_labels: Mapped[list[TaskLabel]] = relationship(
-        "TaskLabel", back_populates="task"
-    )
+    task_labels: Mapped[list[TaskLabel]] = relationship("TaskLabel", back_populates="task")
 
     def __repr__(self) -> str:
         return f"<Task id={self.id} title={self.title!r} status={self.status}>"
