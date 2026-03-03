@@ -1,4 +1,5 @@
 """Pytest fixtures shared across the entire test suite."""
+
 from __future__ import annotations
 
 import os

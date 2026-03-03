@@ -1,4 +1,5 @@
 """M2 tests — auth endpoints: register, login, refresh, logout, me."""
+
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
@@ -6,6 +7,7 @@ from fastapi.testclient import TestClient
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _register(client: TestClient, email: str, password: str = "Secret123") -> dict:
     resp = client.post(
@@ -25,6 +27,7 @@ def _login(client: TestClient, email: str, password: str = "Secret123") -> dict:
 # ---------------------------------------------------------------------------
 # POST /auth/register
 # ---------------------------------------------------------------------------
+
 
 def test_register_success(client: TestClient):
     resp = _register(client, "alice@example.com")
@@ -71,6 +74,7 @@ def test_register_invalid_email(client: TestClient):
 # POST /auth/login
 # ---------------------------------------------------------------------------
 
+
 def test_login_success(client: TestClient):
     _register(client, "grace@example.com")
     resp = _login(client, "grace@example.com")
@@ -102,6 +106,7 @@ def test_login_case_insensitive_email(client: TestClient):
 # ---------------------------------------------------------------------------
 # POST /auth/refresh
 # ---------------------------------------------------------------------------
+
 
 def test_refresh_success(client: TestClient):
     _register(client, "jake@example.com")
@@ -157,6 +162,7 @@ def test_refresh_invalid_token(client: TestClient):
 # POST /auth/logout
 # ---------------------------------------------------------------------------
 
+
 def test_logout_success(client: TestClient):
     _register(client, "mia@example.com")
     login_resp = _login(client, "mia@example.com")
@@ -187,6 +193,7 @@ def test_logout_prevents_refresh(client: TestClient):
 # ---------------------------------------------------------------------------
 # GET /auth/me
 # ---------------------------------------------------------------------------
+
 
 def test_me_success(client: TestClient):
     _register(client, "olivia@example.com")
