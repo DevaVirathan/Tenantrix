@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import secrets
+
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-import secrets
 
 
 class Settings(BaseSettings):

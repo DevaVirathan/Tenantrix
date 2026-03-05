@@ -10,13 +10,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- M3 — Organization management (create, invite, membership)
-- M4 — Project management (CRUD)
-- M5 — Task management (CRUD, filtering, labels)
 - M6 — Comments
 - M7 — Audit logging
 - M8 — Integration tests + CI/CD
 - M9 — Hardening, rate limiting, idempotency, security review
+
+---
+
+## [0.5.0] — 2026-03-05 — M5: Task Management
+
+### Added
+- `app/schemas/task.py` — `TaskCreateRequest`, `TaskUpdateRequest`, `TaskOut`, `LabelCreateRequest`, `LabelOut` (Pydantic v2)
+- `app/api/v1/tasks.py` — 7 endpoints:
+  - `POST   /api/v1/organizations/{org_id}/projects/{project_id}/tasks` — create task (MEMBER+)
+  - `GET    /api/v1/organizations/{org_id}/projects/{project_id}/tasks` — list tasks with filters: `status`, `priority`, `assignee_user_id` (MEMBER+)
+  - `GET    /api/v1/organizations/{org_id}/tasks/{task_id}` — retrieve task (MEMBER+)
+  - `PATCH  /api/v1/organizations/{org_id}/tasks/{task_id}` — update task fields (MEMBER+)
+  - `DELETE /api/v1/organizations/{org_id}/tasks/{task_id}` — soft delete via `deleted_at` (ADMIN+)
+  - `POST   /api/v1/organizations/{org_id}/tasks/{task_id}/labels` — upsert label by name + attach to task (MEMBER+)
+  - `DELETE /api/v1/organizations/{org_id}/tasks/{task_id}/labels/{label_name}` — detach label from task (MEMBER+)
+- `tests/test_tasks.py` — 35 tests covering all endpoints and edge cases
+
+### Implementation Notes
+- Soft delete: `deleted_at` timestamp; `NULL` = active; hidden from all reads
+- Label upsert: get-or-create label by `(org_id, name)`, idempotent attachment
+- Assignee validation: must be an active org member
+- `db.expire_all()` after commit ensures fresh `selectinload` of `task_labels → label`
+- `# noqa: B008` added to `organizations.py` `Depends(get_db)` lines (pre-existing omission)
 
 ---
 

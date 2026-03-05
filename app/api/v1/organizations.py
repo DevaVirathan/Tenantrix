@@ -50,7 +50,7 @@ def _slugify(name: str) -> str:
 def create_organization(
     body: OrgCreateRequest,
     current_user: CurrentUser,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db),  # noqa: B008
 ) -> OrgOut:
     # Check slug uniqueness
     existing = db.scalar(select(Organization).where(Organization.slug == body.slug))
@@ -102,7 +102,7 @@ def get_organization(
 @router.get("/{org_id}/members", response_model=list[MemberOut])
 def list_members(
     org_and_membership: OrgMember,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db),  # noqa: B008
 ) -> list[MemberOut]:
     org, _ = org_and_membership
     rows = (
@@ -134,7 +134,7 @@ def list_members(
 def create_invite(
     body: InviteCreateRequest,
     org_and_membership: OrgAdmin,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db),  # noqa: B008
 ) -> InviteOut:
     org, _ = org_and_membership
 
@@ -188,7 +188,7 @@ def create_invite(
 def accept_invite(
     token: str = Path(...),
     current_user: CurrentUser = ...,  # type: ignore[assignment]
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db),  # noqa: B008
 ) -> OrgOut:
     invite = db.scalar(select(Invite).where(Invite.token == token))
 
@@ -249,7 +249,7 @@ def change_member_role(
     user_id: uuid.UUID,
     body: MemberRoleUpdateRequest,
     org_and_membership: OrgAdmin,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db),  # noqa: B008
 ) -> MemberOut:
     org, acting_membership = org_and_membership
 
@@ -299,7 +299,7 @@ def change_member_role(
 def remove_member(
     user_id: uuid.UUID,
     org_and_membership: OrgAdmin,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db),  # noqa: B008
 ) -> None:
     org, acting_membership = org_and_membership
 
