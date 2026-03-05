@@ -23,6 +23,7 @@ from app.schemas.task import (
     TaskOut,
     TaskUpdateRequest,
 )
+from app.services.audit import write_audit
 
 router = APIRouter(prefix="/organizations/{org_id}", tags=["tasks"])
 
@@ -121,6 +122,16 @@ def create_task(
         position=body.position,
     )
     db.add(task)
+    db.flush()
+    write_audit(
+        db,
+        organization_id=org.id,
+        actor_user_id=_membership.user_id,
+        action="task.created",
+        resource_type="task",
+        resource_id=str(task.id),
+        metadata={"title": task.title, "project_id": str(project_id)},
+    )
     db.commit()
     db.expire_all()
     return _task_to_out(_get_task_or_404(db, org.id, task.id))
@@ -219,6 +230,14 @@ def update_task(
                 )
         task.assignee_user_id = body.assignee_user_id
 
+    write_audit(
+        db,
+        organization_id=org.id,
+        actor_user_id=_membership.user_id,
+        action="task.updated",
+        resource_type="task",
+        resource_id=str(task_id),
+    )
     db.commit()
     db.expire_all()
     return _task_to_out(_get_task_or_404(db, org.id, task.id))
@@ -239,6 +258,14 @@ def delete_task(
     org, _membership = org_admin
     task = _get_task_or_404(db, org.id, task_id)
     task.deleted_at = datetime.now(UTC)
+    write_audit(
+        db,
+        organization_id=org.id,
+        actor_user_id=_membership.user_id,
+        action="task.deleted",
+        resource_type="task",
+        resource_id=str(task_id),
+    )
     db.commit()
 
 
@@ -274,6 +301,15 @@ def add_label_to_task(
     if existing_link is None:
         db.add(TaskLabel(task_id=task.id, label_id=label.id))
 
+    write_audit(
+        db,
+        organization_id=org.id,
+        actor_user_id=_membership.user_id,
+        action="task.label_added",
+        resource_type="task",
+        resource_id=str(task.id),
+        metadata={"label": body.name},
+    )
     db.commit()
     db.expire_all()  # clear identity map so reload fetches fresh data with selectinload
     return _task_to_out(_get_task_or_404(db, org.id, task.id))
@@ -313,4 +349,13 @@ def remove_label_from_task(
         )
 
     db.delete(link)
+    write_audit(
+        db,
+        organization_id=org.id,
+        actor_user_id=_membership.user_id,
+        action="task.label_removed",
+        resource_type="task",
+        resource_id=str(task.id),
+        metadata={"label": label_name},
+    )
     db.commit()

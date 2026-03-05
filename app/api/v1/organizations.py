@@ -25,6 +25,7 @@ from app.schemas.organization import (
     OrgCreateRequest,
     OrgOut,
 )
+from app.services.audit import write_audit
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 
@@ -76,6 +77,15 @@ def create_organization(
         status=MembershipStatus.ACTIVE,
     )
     db.add(membership)
+    write_audit(
+        db,
+        organization_id=org.id,
+        actor_user_id=current_user.id,
+        action="org.created",
+        resource_type="organization",
+        resource_id=str(org.id),
+        metadata={"name": org.name, "slug": org.slug},
+    )
     db.commit()
     db.refresh(org)
     return OrgOut.model_validate(org)
@@ -174,6 +184,15 @@ def create_invite(
         expires_at=expires_at,
     )
     db.add(invite)
+    write_audit(
+        db,
+        organization_id=org.id,
+        actor_user_id=org_and_membership[1].user_id,
+        action="invite.sent",
+        resource_type="invite",
+        resource_id=str(invite.id),
+        metadata={"email": body.email, "role": body.role},
+    )
     db.commit()
     db.refresh(invite)
     return InviteOut.model_validate(invite)
@@ -233,6 +252,15 @@ def accept_invite(
         existing.status = MembershipStatus.ACTIVE
 
     invite.accepted_at = datetime.now(UTC)
+    write_audit(
+        db,
+        organization_id=invite.organization_id,
+        actor_user_id=current_user.id,
+        action="invite.accepted",
+        resource_type="membership",
+        resource_id=str(current_user.id),
+        metadata={"role": invite.role},
+    )
     db.commit()
 
     org = db.get(Organization, invite.organization_id)
@@ -280,6 +308,15 @@ def change_member_role(
         )
 
     target.role = body.role
+    write_audit(
+        db,
+        organization_id=org.id,
+        actor_user_id=acting_membership.user_id,
+        action="member.role_changed",
+        resource_type="membership",
+        resource_id=str(user_id),
+        metadata={"new_role": str(body.role)},
+    )
     db.commit()
     db.refresh(target)
     return MemberOut(
@@ -324,4 +361,12 @@ def remove_member(
         )
 
     db.delete(target)
+    write_audit(
+        db,
+        organization_id=org.id,
+        actor_user_id=acting_membership.user_id,
+        action="member.removed",
+        resource_type="membership",
+        resource_id=str(user_id),
+    )
     db.commit()

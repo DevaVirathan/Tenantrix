@@ -10,9 +10,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- M7 — Audit logging
 - M8 — Integration tests + CI/CD
 - M9 — Hardening, rate limiting, idempotency, security review
+
+---
+
+## [0.7.0] — 2026-03-05 — M7: Audit Logging
+
+### Added
+- `app/services/audit.py` — `write_audit()` helper (flush-only, atomic with caller's commit)
+- `app/schemas/audit_log.py` — `AuditLogOut` (renames ORM `metadata_` → API `metadata`)
+- `app/api/v1/audit_logs.py` — 1 endpoint:
+  - `GET /api/v1/organizations/{org_id}/audit-logs` — list audit events (ADMIN+)
+    - Filters: `action`, `resource_type`, `resource_id`, `actor_user_id`, `since`, `until`
+    - Pagination: `limit` (default 50, max 100), `offset`; ordered newest-first
+- 16 audit actions instrumented across M3–M6 endpoints:
+
+  | Action | Endpoint |
+  |---|---|
+  | `org.created` | POST /organizations |
+  | `invite.sent` | POST /organizations/{id}/invites |
+  | `invite.accepted` | POST /organizations/invites/accept/{token} |
+  | `member.role_changed` | PATCH /organizations/{id}/members/{uid}/role |
+  | `member.removed` | DELETE /organizations/{id}/members/{uid} |
+  | `project.created` | POST /organizations/{id}/projects |
+  | `project.updated` | PATCH /organizations/{id}/projects/{pid} |
+  | `project.deleted` | DELETE /organizations/{id}/projects/{pid} |
+  | `task.created` | POST /organizations/{id}/projects/{pid}/tasks |
+  | `task.updated` | PATCH /organizations/{id}/tasks/{tid} |
+  | `task.deleted` | DELETE /organizations/{id}/tasks/{tid} |
+  | `task.label_added` | POST /organizations/{id}/tasks/{tid}/labels |
+  | `task.label_removed` | DELETE /organizations/{id}/tasks/{tid}/labels/{name} |
+  | `comment.created` | POST /organizations/{id}/tasks/{tid}/comments |
+  | `comment.updated` | PATCH /organizations/{id}/comments/{cid} |
+  | `comment.deleted` | DELETE /organizations/{id}/comments/{cid} |
+
+- `tests/test_audit_logs.py` — 21 tests covering access control, event emission, response shape, filters, pagination, and org isolation
+
+### Implementation Notes
+- `AuditLog.metadata_` column avoids clash with SQLAlchemy internals; exposed as `metadata` in API via `AuditLogOut.from_orm()`
+- `write_audit()` always flushes but never commits — mutations remain atomic with the surrounding transaction
 
 ---
 
