@@ -14,6 +14,7 @@ from app.db.session import get_db
 from app.models.comment import Comment
 from app.models.task import Task
 from app.schemas.comment import CommentCreateRequest, CommentOut, CommentUpdateRequest
+from app.services.audit import write_audit
 
 router = APIRouter(prefix="/organizations/{org_id}", tags=["comments"])
 
@@ -76,6 +77,16 @@ def create_comment(
         body=body.body,
     )
     db.add(comment)
+    db.flush()
+    write_audit(
+        db,
+        organization_id=org.id,
+        actor_user_id=membership.user_id,
+        action="comment.created",
+        resource_type="comment",
+        resource_id=str(comment.id),
+        metadata={"task_id": str(task_id)},
+    )
     db.commit()
     db.refresh(comment)
     return CommentOut.model_validate(comment)
@@ -134,6 +145,14 @@ def update_comment(
         )
 
     comment.body = body.body
+    write_audit(
+        db,
+        organization_id=org.id,
+        actor_user_id=membership.user_id,
+        action="comment.updated",
+        resource_type="comment",
+        resource_id=str(comment_id),
+    )
     db.commit()
     db.refresh(comment)
     return CommentOut.model_validate(comment)
@@ -163,4 +182,12 @@ def delete_comment(
         )
 
     comment.deleted_at = datetime.now(UTC)
+    write_audit(
+        db,
+        organization_id=org.id,
+        actor_user_id=membership.user_id,
+        action="comment.deleted",
+        resource_type="comment",
+        resource_id=str(comment_id),
+    )
     db.commit()
