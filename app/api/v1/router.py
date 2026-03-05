@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api.v1 import auth, health, organizations, projects, tasks
+from app.api.v1 import auth, comments, health, organizations, projects, tasks
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -23,6 +23,5 @@ api_router.include_router(projects.router)
 # M5 — Tasks
 api_router.include_router(tasks.router)
 
-# Future routers will be added here as milestones are completed:
-# from app.api.v1 import comments
-# api_router.include_router(comments.router)
+# M6 — Comments
+api_router.include_router(comments.router)
