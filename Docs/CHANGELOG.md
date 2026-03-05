@@ -10,10 +10,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- M6 — Comments
 - M7 — Audit logging
 - M8 — Integration tests + CI/CD
 - M9 — Hardening, rate limiting, idempotency, security review
+
+---
+
+## [0.6.0] — 2026-03-05 — M6: Comments
+
+### Added
+- `app/schemas/comment.py` — `CommentCreateRequest`, `CommentUpdateRequest`, `CommentOut` (Pydantic v2)
+- `app/api/v1/comments.py` — 4 endpoints:
+  - `POST   /api/v1/organizations/{org_id}/tasks/{task_id}/comments` — add comment to task (MEMBER+)
+  - `GET    /api/v1/organizations/{org_id}/tasks/{task_id}/comments` — list active comments, oldest-first (MEMBER+)
+  - `PATCH  /api/v1/organizations/{org_id}/comments/{comment_id}` — edit body (author or ADMIN+)
+  - `DELETE /api/v1/organizations/{org_id}/comments/{comment_id}` — soft delete (author or ADMIN+)
+- `tests/test_comments.py` — 23 tests covering all endpoints and access-control edge cases
+
+### Implementation Notes
+- Soft delete: `deleted_at` timestamp — hidden from list, subsequent operations return 404
+- Edit/delete guard: author **or** ADMIN/OWNER may modify; plain MEMBER cannot touch others' comments
+- `comment.author_user_id` sourced from the authenticated membership, not the request body
+- Fixed pre-existing `test_login_success` hard-coded `expires_in` → now reads from `settings.ACCESS_TOKEN_EXPIRE_MINUTES`
 
 ---
 

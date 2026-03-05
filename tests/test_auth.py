@@ -83,7 +83,8 @@ def test_login_success(client: TestClient):
     assert "access_token" in data
     assert "refresh_token" in data
     assert data["token_type"] == "bearer"
-    assert data["expires_in"] == 15 * 60
+    from app.core.config import settings
+    assert data["expires_in"] == settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
 
 
 def test_login_wrong_password(client: TestClient):
