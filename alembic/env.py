@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 # Import Base FIRST so all ORM models are registered
 # Import all models so Alembic knows about every table.
-import app.models  # noqa: F401
+import app.db.models  # noqa: F401
 from app.core.config import settings
 from app.db.base import Base
 

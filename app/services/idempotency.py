@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.models.idempotency_key import IdempotencyKey
+from app.db.models.idempotency_key import IdempotencyKey
 
 _TTL_HOURS = 24
 

@@ -12,7 +12,6 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.middleware.error_handler import (
@@ -23,6 +22,7 @@ from app.middleware.error_handler import (
 from app.middleware.logging import StructuredLoggingMiddleware
 from app.middleware.request_id import RequestIDMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
+from app.routers.setup_router import api_router
 
 
 # --------------------------------------------------------------------------- #

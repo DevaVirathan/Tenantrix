@@ -6,7 +6,7 @@ import uuid
 
 from sqlalchemy.orm import Session
 
-from app.models.audit_log import AuditLog
+from app.db.models.audit_log import AuditLog
 
 
 def write_audit(

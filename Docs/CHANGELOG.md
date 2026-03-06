@@ -14,6 +14,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased] — Refactor: Domain-Layered Architecture
+
+### Changed
+- **Project structure** reorganised from flat layout to domain-driven layered architecture,
+  matching the `training10x-backend-course-module` pattern.
+- **Models** moved from `app/models/` to `app/db/models/` (canonical location);
+  old paths retained as compatibility shims (`from app.db.models.X import *`).
+- **Endpoint logic** moved from `app/api/v1/*.py` into per-domain routers:
+  `app/routers/{auth,organizations,projects,tasks,comments,audit_logs,health}/router.py`.
+- **Schemas** moved from `app/schemas/*.py` into per-domain schema modules:
+  `app/routers/{domain}/schemas/{domain}_schemas.py`;
+  old paths retained as compatibility shims.
+- **Service layer** introduced per domain:
+  `app/routers/{domain}/services/{domain}_service.py`
+  (extracted from inline endpoint logic).
+- **Repository layer** introduced per domain:
+  `app/routers/{domain}/repositories/{domain}_repo.py`
+  (all DB queries encapsulated).
+- New top-level router aggregator: `app/routers/setup_router.py` (replaces `app/api/v1/router.py`).
+- `app/main.py` updated to import from `app.routers.setup_router`.
+- `app/api/deps.py`, `app/services/audit.py`, `app/services/idempotency.py`,
+  and `alembic/env.py` updated to use new canonical `app.db.models.*` import paths.
+
+### No Breaking Changes
+- All old import paths (`app.models.*`, `app.schemas.*`, `app.api.v1.*`) continue to work
+  via compatibility shims — zero changes required in tests or external consumers.
+- 199/199 tests pass after restructure.
+
+---
+
 ## [0.9.0] — 2026-03-05 — M9: Security Review
 
 ### Added

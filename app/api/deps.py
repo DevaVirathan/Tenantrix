@@ -11,10 +11,10 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.core.security import decode_access_token
+from app.db.models.membership import Membership, OrgRole
+from app.db.models.organization import Organization
+from app.db.models.user import User
 from app.db.session import get_db
-from app.models.membership import Membership, OrgRole
-from app.models.organization import Organization
-from app.models.user import User
 
 _bearer = HTTPBearer(auto_error=False)
 
