@@ -20,6 +20,11 @@ class OrgCreateRequest(BaseModel):
     description: str | None = Field(None, max_length=1000)
 
 
+class OrgUpdateRequest(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = Field(None, max_length=1000)
+
+
 class InviteCreateRequest(BaseModel):
     email: str = Field(..., min_length=3, max_length=255)
     role: OrgRole = OrgRole.MEMBER

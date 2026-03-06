@@ -10,8 +10,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- M8 — Integration tests + CI/CD
-- M9 — Hardening, rate limiting, idempotency, security review
+- M10 — Idempotency keys (full middleware enforcement on all POST mutations)
+
+---
+
+## [0.9.0] — 2026-03-05 — M9: Security Review
+
+### Added
+- `app/middleware/security_headers.py` — `SecurityHeadersMiddleware`:
+  - `X-Content-Type-Options: nosniff`
+  - `X-Frame-Options: DENY`
+  - `Referrer-Policy: strict-origin-when-cross-origin`
+  - `Permissions-Policy: geolocation=(), microphone=(), camera=()`
+  - `Strict-Transport-Security` (production only)
+- `app/core/limiter.py` — extracted global `Limiter` instance (breaks circular import)
+- Per-route rate limits on auth endpoints: `/register` 10/min, `/login` 10/min, `/refresh` 20/min
+- Rate limiting disabled in `ENVIRONMENT=test` (`enabled=False`) to prevent test flakiness
+- Stronger password strength validator in `RegisterRequest`:
+  - Requires: uppercase, lowercase, digit, special character
+  - Replaces old letters+numbers-only check
+
+### Changed
+- `app/schemas/auth.py` — `password_strength` validator replaces `password_not_too_simple`
+- `tests/test_auth.py` — default test password updated to `"Secret@123"` (satisfies new rules)
+- `.github/workflows/ci.yml` — CI now triggers on `feat/**` branches; coverage threshold raised to 85%
+
+---
+
+## [0.8.0] — 2026-03-05 — M8: Production Hardening
+
+### Added
+- `app/middleware/request_id.py` — `RequestIDMiddleware`:
+  - Accepts client-supplied `X-Request-ID` (validates UUID) or generates a fresh UUID4
+  - Echoes resolved ID in `X-Request-ID` response header
+  - Stores on `request.state.request_id` for logging and error responses
+- `app/middleware/logging.py` — `StructuredLoggingMiddleware`:
+  - Emits one JSON log line per request: `request_id`, `method`, `path`, `status_code`, `duration_ms`
+- `app/middleware/error_handler.py` — global error handlers:
+  - Consistent `{"error": {"status_code": …, "detail": …, "request_id": …}}` envelope
+  - Handles: `HTTPException`, `RequestValidationError`, unhandled `Exception` (500)
+- `app/services/idempotency.py` — `get_cached_response()` / `store_idempotency_response()` service helpers
+- `GET /api/v1/organizations` — list all orgs the authenticated user is a member of
+- `PATCH /api/v1/organizations/{org_id}` — update org name / description (OWNER only), emits `org.updated` audit event
+- `app/schemas/organization.py` — `OrgUpdateRequest` schema
+- `tests/test_hardening.py` — 29 tests covering all M8/M9 features
+
+### Changed
+- `app/main.py` — wires all new middleware and error handlers; imports `limiter` from `app.core.limiter`
+- `app/api/v1/organizations.py` — imports `OrgOwner`, `OrgUpdateRequest`; moved inline `select` import to top-level
 
 ---
 

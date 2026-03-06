@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
+
+_SPECIAL_RE = re.compile(r"[!@#$%^&*()\-_=+\[\]{};:'\",.<>/?\\|`~]")
 
 
 # --------------------------------------------------------------------------- #
@@ -18,9 +21,18 @@ class RegisterRequest(BaseModel):
 
     @field_validator("password")
     @classmethod
-    def password_not_too_simple(cls, v: str) -> str:
-        if v.isdigit() or v.isalpha():
-            raise ValueError("Password must contain letters and numbers.")
+    def password_strength(cls, v: str) -> str:
+        errors: list[str] = []
+        if not any(c.islower() for c in v):
+            errors.append("at least one lowercase letter")
+        if not any(c.isupper() for c in v):
+            errors.append("at least one uppercase letter")
+        if not any(c.isdigit() for c in v):
+            errors.append("at least one digit")
+        if not _SPECIAL_RE.search(v):
+            errors.append("at least one special character (!@#$%^&* …)")
+        if errors:
+            raise ValueError("Password must contain: " + ", ".join(errors) + ".")
         return v
 
 

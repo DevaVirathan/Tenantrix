@@ -6,11 +6,12 @@ import uuid
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser
 from app.core.config import settings
+from app.core.limiter import limiter
 from app.core.security import (
     create_access_token,
     generate_refresh_token,
@@ -48,7 +49,8 @@ DB = Annotated[Session, Depends(get_db)]
     status_code=status.HTTP_201_CREATED,
     summary="Register a new user account",
 )
-def register(body: RegisterRequest, db: DB) -> User:
+@limiter.limit("10/minute")
+def register(request: Request, body: RegisterRequest, db: DB) -> User:
     # Check duplicate email (case-insensitive)
     existing = db.query(User).filter(User.email == body.email.lower()).first()
     if existing:
@@ -76,7 +78,8 @@ def register(body: RegisterRequest, db: DB) -> User:
     response_model=TokenPair,
     summary="Authenticate and receive access + refresh tokens",
 )
-def login(body: LoginRequest, db: DB) -> TokenPair:
+@limiter.limit("10/minute")
+def login(request: Request, body: LoginRequest, db: DB) -> TokenPair:
     user = db.query(User).filter(User.email == body.email.lower()).first()
 
     if user is None or not verify_password(body.password, user.password_hash):
@@ -116,7 +119,8 @@ def login(body: LoginRequest, db: DB) -> TokenPair:
     response_model=AccessTokenOut,
     summary="Rotate refresh token and get a new access token",
 )
-def refresh(body: RefreshRequest, db: DB) -> AccessTokenOut:
+@limiter.limit("20/minute")
+def refresh(request: Request, body: RefreshRequest, db: DB) -> AccessTokenOut:
     token_hash = hash_refresh_token(body.refresh_token)
 
     stored = db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()

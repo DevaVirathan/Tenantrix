@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 # ---------------------------------------------------------------------------
 
 
-def _register(client: TestClient, email: str, password: str = "Secret123") -> dict:
+def _register(client: TestClient, email: str, password: str = "Secret@123") -> dict:
     resp = client.post(
         "/api/v1/auth/register",
         json={"email": email, "password": password, "full_name": "Test User"},
@@ -17,7 +17,7 @@ def _register(client: TestClient, email: str, password: str = "Secret123") -> di
     return resp
 
 
-def _login(client: TestClient, email: str, password: str = "Secret123") -> dict:
+def _login(client: TestClient, email: str, password: str = "Secret@123") -> dict:
     return client.post(
         "/api/v1/auth/login",
         json={"email": email, "password": password},
@@ -66,7 +66,7 @@ def test_register_password_all_letters(client: TestClient):
 
 
 def test_register_invalid_email(client: TestClient):
-    resp = _register(client, "not-an-email", password="Secret123")
+    resp = _register(client, "not-an-email", password="Secret@123")
     assert resp.status_code == 422
 
 

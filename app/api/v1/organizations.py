@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import CurrentUser, OrgAdmin, OrgMember
+from app.api.deps import CurrentUser, OrgAdmin, OrgMember, OrgOwner
 from app.db.session import get_db
 from app.models.invite import Invite
 from app.models.membership import Membership, MembershipStatus, OrgRole
@@ -24,6 +24,7 @@ from app.schemas.organization import (
     MemberRoleUpdateRequest,
     OrgCreateRequest,
     OrgOut,
+    OrgUpdateRequest,
 )
 from app.services.audit import write_audit
 
@@ -92,6 +93,33 @@ def create_organization(
 
 
 # --------------------------------------------------------------------------- #
+# GET /organizations — list current user's organisations                        #
+# --------------------------------------------------------------------------- #
+
+
+@router.get("", response_model=list[OrgOut])
+def list_organizations(
+    current_user: CurrentUser,
+    db: Session = Depends(get_db),  # noqa: B008
+) -> list[OrgOut]:
+    """Return all organisations the authenticated user is an active member of."""
+    memberships = (
+        db.query(Membership)
+        .filter_by(user_id=current_user.id, status=MembershipStatus.ACTIVE)
+        .all()
+    )
+    org_ids = [m.organization_id for m in memberships]
+    if not org_ids:
+        return []
+    orgs = db.scalars(
+        select(Organization)
+        .where(Organization.id.in_(org_ids))
+        .order_by(Organization.created_at.desc())
+    ).all()
+    return [OrgOut.model_validate(o) for o in orgs]
+
+
+# --------------------------------------------------------------------------- #
 # GET /organizations/{org_id} — fetch org detail                               #
 # --------------------------------------------------------------------------- #
 
@@ -101,6 +129,39 @@ def get_organization(
     org_and_membership: OrgMember,
 ) -> OrgOut:
     org, _ = org_and_membership
+    return OrgOut.model_validate(org)
+
+
+# --------------------------------------------------------------------------- #
+# PATCH /organizations/{org_id} — update org name / description (OWNER)        #
+# --------------------------------------------------------------------------- #
+
+
+@router.patch("/{org_id}", response_model=OrgOut)
+def update_organization(
+    body: OrgUpdateRequest,
+    org_and_membership: OrgOwner,
+    db: Session = Depends(get_db),  # noqa: B008
+) -> OrgOut:
+    """Update an organisation's name and/or description (OWNER required)."""
+    org, acting_membership = org_and_membership
+
+    if body.name is not None:
+        org.name = body.name
+    if body.description is not None:
+        org.description = body.description
+
+    write_audit(
+        db,
+        organization_id=org.id,
+        actor_user_id=acting_membership.user_id,
+        action="org.updated",
+        resource_type="organization",
+        resource_id=str(org.id),
+        metadata={"name": org.name},
+    )
+    db.commit()
+    db.refresh(org)
     return OrgOut.model_validate(org)
 
 
