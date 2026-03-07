@@ -5,6 +5,10 @@ import { LoginPage } from "@/pages/auth/login"
 import { RegisterPage } from "@/pages/auth/register"
 import { AcceptInvitePage } from "@/pages/auth/accept-invite"
 import { OrgsPage } from "@/pages/orgs/index"
+import { OrgDashboardPage } from "@/pages/orgs/dashboard"
+import { MembersPage } from "@/pages/orgs/members"
+import { InvitesPage } from "@/pages/orgs/invites"
+import { OrgSettingsPage } from "@/pages/orgs/settings"
 
 function NotFoundPage() {
   return (
@@ -35,6 +39,11 @@ export const router = createBrowserRouter([
     element: <DashboardLayout />,
     children: [
       { path: "/orgs", element: <OrgsPage /> },
+      { path: "/orgs/new", element: <OrgsPage /> },
+      { path: "/orgs/:orgId", element: <OrgDashboardPage /> },
+      { path: "/orgs/:orgId/members", element: <MembersPage /> },
+      { path: "/orgs/:orgId/invites", element: <InvitesPage /> },
+      { path: "/orgs/:orgId/settings", element: <OrgSettingsPage /> },
     ],
   },
   {

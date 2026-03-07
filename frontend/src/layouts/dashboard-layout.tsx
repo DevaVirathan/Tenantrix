@@ -1,15 +1,21 @@
-import { Outlet } from "react-router-dom"
+import { Outlet, useParams } from "react-router-dom"
 import { AuthGuard } from "@/components/shared/auth-guard"
 import { TopBar } from "@/components/layout/top-bar"
+import { Sidebar } from "@/components/layout/sidebar"
 
 export function DashboardLayout() {
+  const { orgId } = useParams<{ orgId?: string }>()
+
   return (
     <AuthGuard>
       <div className="min-h-svh bg-background flex flex-col">
         <TopBar />
-        <main className="flex-1 p-6">
-          <Outlet />
-        </main>
+        <div className="flex flex-1 overflow-hidden">
+          {orgId && <Sidebar />}
+          <main className="flex-1 overflow-y-auto p-6">
+            <Outlet />
+          </main>
+        </div>
       </div>
     </AuthGuard>
   )

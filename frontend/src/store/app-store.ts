@@ -1,6 +1,7 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import type { User } from "@/types/auth"
+import type { Organization, OrgRole } from "@/types/org"
 
 interface AppState {
   // Auth
@@ -8,9 +9,16 @@ interface AppState {
   accessToken: string | null
   refreshToken: string | null
 
+  // Active org
+  activeOrg: Organization | null
+  activeMembership: { role: OrgRole } | null
+  sidebarOpen: boolean
+
   // Actions
   setTokens: (accessToken: string, refreshToken: string) => void
   setUser: (user: User) => void
+  setActiveOrg: (org: Organization, role: OrgRole) => void
+  setSidebarOpen: (open: boolean) => void
   logout: () => void
 }
 
@@ -20,14 +28,28 @@ export const useAppStore = create<AppState>()(
       user: null,
       accessToken: null,
       refreshToken: null,
+      activeOrg: null,
+      activeMembership: null,
+      sidebarOpen: true,
 
       setTokens: (accessToken, refreshToken) =>
         set({ accessToken, refreshToken }),
 
       setUser: (user) => set({ user }),
 
+      setActiveOrg: (org, role) =>
+        set({ activeOrg: org, activeMembership: { role } }),
+
+      setSidebarOpen: (open) => set({ sidebarOpen: open }),
+
       logout: () =>
-        set({ user: null, accessToken: null, refreshToken: null }),
+        set({
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          activeOrg: null,
+          activeMembership: null,
+        }),
     }),
     {
       name: "tenantrix-auth",
