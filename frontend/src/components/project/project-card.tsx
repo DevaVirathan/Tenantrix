@@ -14,7 +14,7 @@ export function ProjectCard({ project, orgId }: ProjectCardProps) {
   return (
     <Card
       className="cursor-pointer hover:bg-accent/50 transition-colors"
-      onClick={() => navigate(`/orgs/${orgId}/projects/${project.id}`)}
+      onClick={() => navigate(`/orgs/${orgId}/projects/${project.id}/board`)}
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">

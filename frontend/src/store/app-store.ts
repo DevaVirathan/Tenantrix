@@ -17,12 +17,18 @@ interface AppState {
   // Project list view preference
   projectView: "grid" | "list"
 
+  // Task detail panel
+  taskPanelOpen: boolean
+  activeTaskId: string | null
+
   // Actions
   setTokens: (accessToken: string, refreshToken: string) => void
   setUser: (user: User) => void
   setActiveOrg: (org: Organization, role: OrgRole) => void
   setSidebarOpen: (open: boolean) => void
   setProjectView: (view: "grid" | "list") => void
+  openTaskPanel: (taskId: string) => void
+  closeTaskPanel: () => void
   logout: () => void
 }
 
@@ -36,6 +42,8 @@ export const useAppStore = create<AppState>()(
       activeMembership: null,
       sidebarOpen: true,
       projectView: "grid" as const,
+      taskPanelOpen: false,
+      activeTaskId: null,
 
       setTokens: (accessToken, refreshToken) =>
         set({ accessToken, refreshToken }),
@@ -48,6 +56,10 @@ export const useAppStore = create<AppState>()(
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
 
       setProjectView: (view) => set({ projectView: view }),
+
+      openTaskPanel: (taskId) => set({ taskPanelOpen: true, activeTaskId: taskId }),
+
+      closeTaskPanel: () => set({ taskPanelOpen: false, activeTaskId: null }),
 
       logout: () =>
         set({
