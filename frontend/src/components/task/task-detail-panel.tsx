@@ -23,6 +23,7 @@ import { PriorityIcon } from "./priority-icon"
 import { AssigneePicker } from "./assignee-picker"
 import { LabelPicker } from "./label-picker"
 import { useTask, useUpdateTask, useDeleteTask } from "@/hooks/use-tasks"
+import { CommentThread } from "./comment-thread"
 import { useAppStore } from "@/store/app-store"
 import { hasRole } from "@/lib/rbac"
 import { updateTaskSchema, type UpdateTaskValues } from "@/validations/task.schema"
@@ -239,6 +240,9 @@ export function TaskDetailPanel({ orgId, projectId }: TaskDetailPanelProps) {
                 </Button>
               </>
             )}
+
+            <Separator className="my-4" />
+            <CommentThread orgId={orgId} taskId={task.id} />
           </>
         )}
       </SheetContent>
