@@ -2,7 +2,9 @@ import ky, { type KyInstance } from "ky"
 import { useAppStore } from "@/store/app-store"
 import type { TokenPair } from "@/types/auth"
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000"
+// Use the Vite dev proxy (/api/* → localhost:8000) so no CORS preflight is needed.
+// In production set VITE_API_BASE_URL to the actual API base (e.g. https://api.tenantrix.com).
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ""
 
 // Flag to prevent concurrent refresh storms
 let isRefreshing = false
