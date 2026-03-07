@@ -14,11 +14,15 @@ interface AppState {
   activeMembership: { role: OrgRole } | null
   sidebarOpen: boolean
 
+  // Project list view preference
+  projectView: "grid" | "list"
+
   // Actions
   setTokens: (accessToken: string, refreshToken: string) => void
   setUser: (user: User) => void
   setActiveOrg: (org: Organization, role: OrgRole) => void
   setSidebarOpen: (open: boolean) => void
+  setProjectView: (view: "grid" | "list") => void
   logout: () => void
 }
 
@@ -31,6 +35,7 @@ export const useAppStore = create<AppState>()(
       activeOrg: null,
       activeMembership: null,
       sidebarOpen: true,
+      projectView: "grid" as const,
 
       setTokens: (accessToken, refreshToken) =>
         set({ accessToken, refreshToken }),
@@ -41,6 +46,8 @@ export const useAppStore = create<AppState>()(
         set({ activeOrg: org, activeMembership: { role } }),
 
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
+
+      setProjectView: (view) => set({ projectView: view }),
 
       logout: () =>
         set({

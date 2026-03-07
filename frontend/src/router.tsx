@@ -9,6 +9,8 @@ import { OrgDashboardPage } from "@/pages/orgs/dashboard"
 import { MembersPage } from "@/pages/orgs/members"
 import { InvitesPage } from "@/pages/orgs/invites"
 import { OrgSettingsPage } from "@/pages/orgs/settings"
+import { ProjectsPage } from "@/pages/orgs/projects/index"
+import { ProjectSettingsPage } from "@/pages/orgs/projects/[projectId]/settings"
 
 function NotFoundPage() {
   return (
@@ -44,6 +46,8 @@ export const router = createBrowserRouter([
       { path: "/orgs/:orgId/members", element: <MembersPage /> },
       { path: "/orgs/:orgId/invites", element: <InvitesPage /> },
       { path: "/orgs/:orgId/settings", element: <OrgSettingsPage /> },
+      { path: "/orgs/:orgId/projects", element: <ProjectsPage /> },
+      { path: "/orgs/:orgId/projects/:projectId", element: <ProjectSettingsPage /> },
     ],
   },
   {
