@@ -195,6 +195,34 @@ def list_members(
 
 
 # --------------------------------------------------------------------------- #
+# GET /organizations/{org_id}/invites — list pending invites                   #
+# --------------------------------------------------------------------------- #
+
+
+@router.get(
+    "/{org_id}/invites",
+    response_model=list[InviteOut],
+)
+def list_invites(
+    org_and_membership: OrgAdmin,
+    db: Session = Depends(get_db),  # noqa: B008
+) -> list[InviteOut]:
+    org, _ = org_and_membership
+    now = datetime.now(UTC)
+    rows = (
+        db.scalars(
+            select(Invite).where(
+                Invite.organization_id == org.id,
+                Invite.accepted_at.is_(None),
+                Invite.expires_at > now,
+            )
+        )
+        .all()
+    )
+    return [InviteOut.model_validate(inv) for inv in rows]
+
+
+# --------------------------------------------------------------------------- #
 # POST /organizations/{org_id}/invites — send invite                           #
 # --------------------------------------------------------------------------- #
 
