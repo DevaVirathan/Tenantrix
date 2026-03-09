@@ -12,6 +12,7 @@ import { OrgSettingsPage } from "@/pages/orgs/settings"
 import { ProjectsPage } from "@/pages/orgs/projects/index"
 import { ProjectSettingsPage } from "@/pages/orgs/projects/[projectId]/settings"
 import { KanbanBoardPage } from "@/pages/orgs/projects/[projectId]/board"
+import { AuditLogsPage } from "@/pages/orgs/audit-logs"
 
 function NotFoundPage() {
   return (
@@ -50,6 +51,7 @@ export const router = createBrowserRouter([
       { path: "/orgs/:orgId/projects", element: <ProjectsPage /> },
       { path: "/orgs/:orgId/projects/:projectId", element: <ProjectSettingsPage /> },
       { path: "/orgs/:orgId/projects/:projectId/board", element: <KanbanBoardPage /> },
+      { path: "/orgs/:orgId/audit-logs", element: <AuditLogsPage /> },
     ],
   },
   {

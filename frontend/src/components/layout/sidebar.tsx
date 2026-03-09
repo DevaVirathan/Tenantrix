@@ -1,5 +1,5 @@
 import { NavLink, useParams } from "react-router-dom"
-import { LayoutDashboard, Users, Mail, Settings, ClipboardList } from "lucide-react"
+import { LayoutDashboard, Users, Mail, Settings, ClipboardList, Activity } from "lucide-react"
 import { OrgSwitcher } from "./org-switcher"
 import { useAppStore } from "@/store/app-store"
 import { hasRole } from "@/lib/rbac"
@@ -24,6 +24,7 @@ export function Sidebar() {
     { label: "Invites", to: `/orgs/${orgId}/invites`, icon: Mail },
     { label: "Projects", to: `/orgs/${orgId}/projects`, icon: ClipboardList },
     { label: "Settings", to: `/orgs/${orgId}/settings`, icon: Settings, adminOnly: true },
+    { label: "Audit Logs", to: `/orgs/${orgId}/audit-logs`, icon: Activity, adminOnly: true },
   ]
 
   const visibleItems = navItems.filter(
