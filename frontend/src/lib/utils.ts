@@ -16,12 +16,13 @@ export function formatDate(isoString: string, fmt = "MMM d, yyyy"): string {
 
 export function getInitials(name: string | null | undefined, email: string): string {
   if (name) {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2)
+    const parts = name.trim().split(/\s+/).filter(Boolean)
+    if (parts.length > 0) {
+      return parts.map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    }
   }
-  return email[0].toUpperCase()
+  if (email && email.length > 0) {
+    return email[0].toUpperCase()
+  }
+  return "?"
 }
