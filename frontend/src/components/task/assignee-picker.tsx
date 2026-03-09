@@ -15,6 +15,7 @@ interface AssigneePickerProps {
   value: string | null
   onChange: (userId: string | null) => void
   disabled?: boolean
+  compact?: boolean  // slim trigger for properties panel
 }
 
 function initials(name: string) {
@@ -26,7 +27,7 @@ function initials(name: string) {
     .slice(0, 2)
 }
 
-export function AssigneePicker({ orgId, value, onChange, disabled }: AssigneePickerProps) {
+export function AssigneePicker({ orgId, value, onChange, disabled, compact }: AssigneePickerProps) {
   const [open, setOpen] = useState(false)
   const { data: members = [] } = useMembers(orgId)
 
@@ -36,30 +37,48 @@ export function AssigneePicker({ orgId, value, onChange, disabled }: AssigneePic
     return m.full_name ?? m.email ?? m.user_id
   }
 
+  const trigger = compact ? (
+    <button
+      disabled={disabled}
+      className="flex items-center gap-1.5 rounded px-1 py-0.5 text-xs hover:bg-accent transition-colors w-full text-left disabled:opacity-50"
+    >
+      {selectedMember ? (
+        <>
+          <Avatar className="h-5 w-5">
+            <AvatarFallback className="text-[10px]">{initials(displayName(selectedMember))}</AvatarFallback>
+          </Avatar>
+          <span className="truncate">{displayName(selectedMember)}</span>
+        </>
+      ) : (
+        <span className="text-muted-foreground">None</span>
+      )}
+    </button>
+  ) : (
+    <Button
+      variant="outline"
+      role="combobox"
+      disabled={disabled}
+      className="w-full justify-between font-normal"
+    >
+      {selectedMember ? (
+        <span className="flex items-center gap-2">
+          <Avatar className="h-5 w-5">
+            <AvatarFallback className="text-[10px]">
+              {initials(displayName(selectedMember))}
+            </AvatarFallback>
+          </Avatar>
+          <span className="truncate">{displayName(selectedMember)}</span>
+        </span>
+      ) : (
+        <span className="text-muted-foreground">Unassigned</span>
+      )}
+      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+    </Button>
+  )
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          disabled={disabled}
-          className="w-full justify-between font-normal"
-        >
-          {selectedMember ? (
-            <span className="flex items-center gap-2">
-              <Avatar className="h-5 w-5">
-                <AvatarFallback className="text-[10px]">
-                  {initials(displayName(selectedMember))}
-                </AvatarFallback>
-              </Avatar>
-              <span className="truncate">{displayName(selectedMember)}</span>
-            </span>
-          ) : (
-            <span className="text-muted-foreground">Unassigned</span>
-          )}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
+      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent className="w-64 p-1">
         <div className="flex flex-col gap-0.5">
           <button

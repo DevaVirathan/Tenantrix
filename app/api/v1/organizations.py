@@ -187,6 +187,8 @@ def list_members(
             role=m.role,
             status=m.status,
             joined_at=m.created_at,
+            full_name=m.user.full_name if m.user else None,
+            email=m.user.email if m.user else None,
         )
         for m in rows
     ]

@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from "@tanstack/react-query"
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api-client"
 import { queryKeys } from "@/lib/query-keys"
 import type { AuditLog, AuditFilters } from "@/types/audit"
@@ -29,6 +29,21 @@ export function useAuditLogs(orgId: string, filters: Omit<AuditFilters, "limit" 
       return allPages.flat().length
     },
     enabled: !!orgId,
+    staleTime: 1000 * 30,
+  })
+}
+
+/** Fetch all audit events for a single task (by resource_id). Admin-only endpoint. */
+export function useTaskActivity(orgId: string, taskId: string, isAdmin: boolean) {
+  return useQuery({
+    queryKey: queryKeys.taskActivity(orgId, taskId),
+    queryFn: () =>
+      apiClient
+        .get(`organizations/${orgId}/audit-logs`, {
+          searchParams: { resource_id: taskId, limit: "100", offset: "0" },
+        })
+        .json<AuditLog[]>(),
+    enabled: !!orgId && !!taskId && isAdmin,
     staleTime: 1000 * 30,
   })
 }

@@ -65,7 +65,7 @@ export function ProjectsPage() {
       ) : projects && projects.length > 0 ? (
         <div className={projectView === "grid" ? "grid sm:grid-cols-2 lg:grid-cols-3 gap-4" : "grid gap-3"}>
           {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} orgId={orgId} />
+            <ProjectCard key={project.id} project={project} orgId={orgId} view={projectView} />
           ))}
         </div>
       ) : (

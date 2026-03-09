@@ -61,6 +61,8 @@ class MemberOut(BaseModel):
     role: OrgRole
     status: str
     joined_at: datetime  # maps to created_at on the Membership row
+    full_name: str | None = None
+    email: str | None = None
 
     model_config = {"from_attributes": True}
 
