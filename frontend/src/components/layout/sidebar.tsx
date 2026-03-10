@@ -1,7 +1,13 @@
-import { NavLink, useParams } from "react-router-dom"
-import { LayoutDashboard, Users, Mail, Settings, ClipboardList, Activity } from "lucide-react"
+import { useState } from "react"
+import { NavLink, useParams, useLocation } from "react-router-dom"
+import {
+  LayoutDashboard, Users, Mail, Settings, Activity,
+  FolderKanban, ChevronDown, ChevronRight, LayoutGrid, ListTodo,
+  List, Calendar, GanttChart, BarChart3,
+} from "lucide-react"
 import { OrgSwitcher } from "./org-switcher"
 import { useAppStore } from "@/store/app-store"
+import { useProjects } from "@/hooks/use-projects"
 import { hasRole } from "@/lib/rbac"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -15,21 +21,48 @@ interface NavItem {
 
 export function Sidebar() {
   const { orgId } = useParams<{ orgId: string }>()
+  const location = useLocation()
   const activeMembership = useAppStore((s) => s.activeMembership)
   const role = activeMembership?.role ?? null
 
-  const navItems: NavItem[] = [
+  const { data: projects = [] } = useProjects(orgId ?? "")
+
+  // Track which projects are expanded in the sidebar
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set())
+
+  // Auto-expand the active project
+  const activeProjectId = useParams<{ projectId?: string }>().projectId
+
+  function toggleProject(projectId: string) {
+    setExpandedProjects((prev) => {
+      const next = new Set(prev)
+      if (next.has(projectId)) {
+        next.delete(projectId)
+      } else {
+        next.add(projectId)
+      }
+      return next
+    })
+  }
+
+  function isProjectExpanded(projectId: string) {
+    return expandedProjects.has(projectId) || activeProjectId === projectId
+  }
+
+  const topNavItems: NavItem[] = [
     { label: "Dashboard", to: `/orgs/${orgId}`, icon: LayoutDashboard },
     { label: "Members", to: `/orgs/${orgId}/members`, icon: Users },
     { label: "Invites", to: `/orgs/${orgId}/invites`, icon: Mail },
-    { label: "Projects", to: `/orgs/${orgId}/projects`, icon: ClipboardList },
     { label: "Settings", to: `/orgs/${orgId}/settings`, icon: Settings, adminOnly: true },
     { label: "Audit Logs", to: `/orgs/${orgId}/audit-logs`, icon: Activity, adminOnly: true },
   ]
 
-  const visibleItems = navItems.filter(
+  const visibleTopItems = topNavItems.filter(
     (item) => !item.adminOnly || hasRole(role, "admin")
   )
+
+  const canCreateProject = hasRole(role, "member")
+  const isProjectsActive = location.pathname.includes("/projects")
 
   return (
     <aside className="flex h-full w-56 shrink-0 flex-col border-r bg-sidebar">
@@ -41,7 +74,7 @@ export function Sidebar() {
       {/* Nav */}
       <ScrollArea className="flex-1 px-2 py-3">
         <nav className="flex flex-col gap-0.5">
-          {visibleItems.map((item) => (
+          {visibleTopItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -59,6 +92,167 @@ export function Sidebar() {
               {item.label}
             </NavLink>
           ))}
+
+          {/* Projects section */}
+          <div className="mt-2">
+            <div className="flex items-center justify-between px-3 py-1.5">
+              <NavLink
+                to={`/orgs/${orgId}/projects`}
+                className={cn(
+                  "flex items-center gap-2 text-xs font-semibold uppercase tracking-wider transition-colors",
+                  isProjectsActive && !activeProjectId
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                Projects
+              </NavLink>
+            </div>
+
+            <div className="flex flex-col gap-0.5">
+              {projects.map((project) => {
+                const expanded = isProjectExpanded(project.id)
+                const isActive = activeProjectId === project.id
+
+                return (
+                  <div key={project.id}>
+                    <button
+                      onClick={() => toggleProject(project.id)}
+                      className={cn(
+                        "w-full flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors text-left",
+                        isActive
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                      )}
+                    >
+                      <FolderKanban className="h-4 w-4 shrink-0" />
+                      <span className="flex-1 truncate">{project.name}</span>
+                      {expanded
+                        ? <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                        : <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                      }
+                    </button>
+
+                    {expanded && (
+                      <div className="ml-4 flex flex-col gap-0.5 border-l pl-2.5 mt-0.5 mb-1">
+                        <NavLink
+                          to={`/orgs/${orgId}/projects/${project.id}/board`}
+                          className={({ isActive }) =>
+                            cn(
+                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                              isActive
+                                ? "bg-accent text-accent-foreground font-medium"
+                                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                            )
+                          }
+                        >
+                          <LayoutDashboard className="h-3.5 w-3.5 shrink-0" />
+                          Board
+                        </NavLink>
+                        <NavLink
+                          to={`/orgs/${orgId}/projects/${project.id}/backlog`}
+                          className={({ isActive }) =>
+                            cn(
+                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                              isActive
+                                ? "bg-accent text-accent-foreground font-medium"
+                                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                            )
+                          }
+                        >
+                          <ListTodo className="h-3.5 w-3.5 shrink-0" />
+                          Backlog
+                        </NavLink>
+                        <NavLink
+                          to={`/orgs/${orgId}/projects/${project.id}/list`}
+                          className={({ isActive }) =>
+                            cn(
+                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                              isActive
+                                ? "bg-accent text-accent-foreground font-medium"
+                                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                            )
+                          }
+                        >
+                          <List className="h-3.5 w-3.5 shrink-0" />
+                          List
+                        </NavLink>
+                        <NavLink
+                          to={`/orgs/${orgId}/projects/${project.id}/calendar`}
+                          className={({ isActive }) =>
+                            cn(
+                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                              isActive
+                                ? "bg-accent text-accent-foreground font-medium"
+                                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                            )
+                          }
+                        >
+                          <Calendar className="h-3.5 w-3.5 shrink-0" />
+                          Calendar
+                        </NavLink>
+                        <NavLink
+                          to={`/orgs/${orgId}/projects/${project.id}/timeline`}
+                          className={({ isActive }) =>
+                            cn(
+                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                              isActive
+                                ? "bg-accent text-accent-foreground font-medium"
+                                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                            )
+                          }
+                        >
+                          <GanttChart className="h-3.5 w-3.5 shrink-0" />
+                          Timeline
+                        </NavLink>
+                        <NavLink
+                          to={`/orgs/${orgId}/projects/${project.id}/analytics`}
+                          className={({ isActive }) =>
+                            cn(
+                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                              isActive
+                                ? "bg-accent text-accent-foreground font-medium"
+                                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                            )
+                          }
+                        >
+                          <BarChart3 className="h-3.5 w-3.5 shrink-0" />
+                          Analytics
+                        </NavLink>
+                        {hasRole(role, "admin") && (
+                          <NavLink
+                            to={`/orgs/${orgId}/projects/${project.id}`}
+                            end
+                            className={({ isActive }) =>
+                              cn(
+                                "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                                isActive
+                                  ? "bg-accent text-accent-foreground font-medium"
+                                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                              )
+                            }
+                          >
+                            <Settings className="h-3.5 w-3.5 shrink-0" />
+                            Settings
+                          </NavLink>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+
+              {canCreateProject && projects.length === 0 && (
+                <NavLink
+                  to={`/orgs/${orgId}/projects`}
+                  className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground"
+                >
+                  + New project
+                </NavLink>
+              )}
+            </div>
+          </div>
         </nav>
       </ScrollArea>
     </aside>

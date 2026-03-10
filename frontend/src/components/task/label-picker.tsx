@@ -17,6 +17,7 @@ interface LabelPickerProps {
   taskId: string
   currentLabels: Label[]
   disabled?: boolean
+  compact?: boolean  // smaller add-label trigger for properties panel
 }
 
 const PRESET_COLORS = [
@@ -24,7 +25,7 @@ const PRESET_COLORS = [
   "#3b82f6", "#8b5cf6", "#ec4899", "#6b7280",
 ]
 
-export function LabelPicker({ orgId, projectId, taskId, currentLabels, disabled }: LabelPickerProps) {
+export function LabelPicker({ orgId, projectId, taskId, currentLabels, disabled, compact }: LabelPickerProps) {
   const [open, setOpen] = useState(false)
   const [newName, setNewName] = useState("")
   const [newColor, setNewColor] = useState(PRESET_COLORS[0])
@@ -51,10 +52,17 @@ export function LabelPicker({ orgId, projectId, taskId, currentLabels, disabled 
       {!disabled && (
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-6 px-2 gap-1 text-xs text-muted-foreground">
-              <Tag className="h-3 w-3" />
-              Add label
-            </Button>
+            {compact ? (
+              <button className="flex items-center gap-1 rounded px-1 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
+                <Tag className="h-3 w-3" />
+                Select label
+              </button>
+            ) : (
+              <Button variant="ghost" size="sm" className="h-6 px-2 gap-1 text-xs text-muted-foreground">
+                <Tag className="h-3 w-3" />
+                Add label
+              </Button>
+            )}
           </PopoverTrigger>
           <PopoverContent className="w-64 p-3 space-y-3">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">New label</p>

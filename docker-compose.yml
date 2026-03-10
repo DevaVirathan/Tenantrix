@@ -14,8 +14,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: tenantrix
-    # ports:
-    #   - "5432:5432"
+    ports:
+      - "5435:5432"   # exposed as 5435 (5432/33/34 already in use by other PG instances)
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -52,6 +52,18 @@ services:
       --host 0.0.0.0
       --port 8000
       --reload
+
+  # ---------------------------------------------------------------------------
+  # Mailhog — local SMTP server + web UI for dev email testing
+  # ---------------------------------------------------------------------------
+  mailhog:
+    image: mailhog/mailhog:latest
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    logging:
+      driver: none
 
   # ---------------------------------------------------------------------------
   # Test runner — uses a separate test database

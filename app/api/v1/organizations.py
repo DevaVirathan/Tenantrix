@@ -27,6 +27,7 @@ from app.schemas.organization import (
     OrgUpdateRequest,
 )
 from app.services.audit import write_audit
+from app.services.email import send_invite_email
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 
@@ -187,9 +188,39 @@ def list_members(
             role=m.role,
             status=m.status,
             joined_at=m.created_at,
+            full_name=m.user.full_name if m.user else None,
+            email=m.user.email if m.user else None,
         )
         for m in rows
     ]
+
+
+# --------------------------------------------------------------------------- #
+# GET /organizations/{org_id}/invites — list pending invites                   #
+# --------------------------------------------------------------------------- #
+
+
+@router.get(
+    "/{org_id}/invites",
+    response_model=list[InviteOut],
+)
+def list_invites(
+    org_and_membership: OrgAdmin,
+    db: Session = Depends(get_db),  # noqa: B008
+) -> list[InviteOut]:
+    org, _ = org_and_membership
+    now = datetime.now(UTC)
+    rows = (
+        db.scalars(
+            select(Invite).where(
+                Invite.organization_id == org.id,
+                Invite.accepted_at.is_(None),
+                Invite.expires_at > now,
+            )
+        )
+        .all()
+    )
+    return [InviteOut.model_validate(inv) for inv in rows]
 
 
 # --------------------------------------------------------------------------- #
@@ -256,6 +287,18 @@ def create_invite(
     )
     db.commit()
     db.refresh(invite)
+
+    # Send invite email
+    inviter = db.get(User, org_and_membership[1].user_id)
+    inviter_name = inviter.full_name or inviter.email if inviter else "A team member"
+    send_invite_email(
+        to_email=body.email,
+        org_name=org.name,
+        inviter_name=inviter_name,
+        role=body.role.value,
+        token=token,
+    )
+
     return InviteOut.model_validate(invite)
 
 

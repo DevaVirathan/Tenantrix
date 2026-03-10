@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams } from "react-router-dom"
 import {
   DndContext,
   closestCorners,
@@ -10,7 +10,7 @@ import {
 } from "@dnd-kit/core"
 import type { DragEndEvent, DragOverEvent, DragStartEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
-import { ArrowLeft, Plus, Settings } from "lucide-react"
+import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { KanbanColumn } from "@/components/task/kanban-column"
 import { TaskCard } from "@/components/task/task-card"
@@ -27,7 +27,6 @@ import { KANBAN_COLUMNS } from "@/types/task"
 
 export function KanbanBoardPage() {
   const { orgId = "", projectId = "" } = useParams<{ orgId: string; projectId: string }>()
-  const navigate = useNavigate()
   const qc = useQueryClient()
 
   const [filters, setFilters] = useState<TaskFilters>({})
@@ -110,26 +109,13 @@ export function KanbanBoardPage() {
     <div className="flex flex-col h-full gap-4">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate(`/orgs/${orgId}/projects`)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-xl font-semibold">{project?.name ?? "Board"}</h1>
-            {project?.description && (
-              <p className="text-sm text-muted-foreground">{project.description}</p>
-            )}
-          </div>
+        <div>
+          <h1 className="text-xl font-semibold">{project?.name ?? "Board"}</h1>
+          {project?.description && (
+            <p className="text-sm text-muted-foreground">{project.description}</p>
+          )}
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate(`/orgs/${orgId}/projects/${projectId}`)}
-          >
-            <Settings className="h-4 w-4 mr-1" />
-            Settings
-          </Button>
           {canCreate && (
             <CreateTaskDialog orgId={orgId} projectId={projectId}>
               <Button size="sm">
