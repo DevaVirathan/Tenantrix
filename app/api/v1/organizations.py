@@ -27,6 +27,7 @@ from app.schemas.organization import (
     OrgUpdateRequest,
 )
 from app.services.audit import write_audit
+from app.services.email import send_invite_email
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 
@@ -286,6 +287,18 @@ def create_invite(
     )
     db.commit()
     db.refresh(invite)
+
+    # Send invite email
+    inviter = db.get(User, org_and_membership[1].user_id)
+    inviter_name = inviter.full_name or inviter.email if inviter else "A team member"
+    send_invite_email(
+        to_email=body.email,
+        org_name=org.name,
+        inviter_name=inviter_name,
+        role=body.role.value,
+        token=token,
+    )
+
     return InviteOut.model_validate(invite)
 
 

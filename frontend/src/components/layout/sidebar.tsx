@@ -2,7 +2,8 @@ import { useState } from "react"
 import { NavLink, useParams, useLocation } from "react-router-dom"
 import {
   LayoutDashboard, Users, Mail, Settings, Activity,
-  FolderKanban, ChevronDown, ChevronRight, LayoutGrid,
+  FolderKanban, ChevronDown, ChevronRight, LayoutGrid, ListTodo,
+  List, Calendar, GanttChart, BarChart3,
 } from "lucide-react"
 import { OrgSwitcher } from "./org-switcher"
 import { useAppStore } from "@/store/app-store"
@@ -148,6 +149,76 @@ export function Sidebar() {
                         >
                           <LayoutDashboard className="h-3.5 w-3.5 shrink-0" />
                           Board
+                        </NavLink>
+                        <NavLink
+                          to={`/orgs/${orgId}/projects/${project.id}/backlog`}
+                          className={({ isActive }) =>
+                            cn(
+                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                              isActive
+                                ? "bg-accent text-accent-foreground font-medium"
+                                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                            )
+                          }
+                        >
+                          <ListTodo className="h-3.5 w-3.5 shrink-0" />
+                          Backlog
+                        </NavLink>
+                        <NavLink
+                          to={`/orgs/${orgId}/projects/${project.id}/list`}
+                          className={({ isActive }) =>
+                            cn(
+                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                              isActive
+                                ? "bg-accent text-accent-foreground font-medium"
+                                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                            )
+                          }
+                        >
+                          <List className="h-3.5 w-3.5 shrink-0" />
+                          List
+                        </NavLink>
+                        <NavLink
+                          to={`/orgs/${orgId}/projects/${project.id}/calendar`}
+                          className={({ isActive }) =>
+                            cn(
+                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                              isActive
+                                ? "bg-accent text-accent-foreground font-medium"
+                                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                            )
+                          }
+                        >
+                          <Calendar className="h-3.5 w-3.5 shrink-0" />
+                          Calendar
+                        </NavLink>
+                        <NavLink
+                          to={`/orgs/${orgId}/projects/${project.id}/timeline`}
+                          className={({ isActive }) =>
+                            cn(
+                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                              isActive
+                                ? "bg-accent text-accent-foreground font-medium"
+                                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                            )
+                          }
+                        >
+                          <GanttChart className="h-3.5 w-3.5 shrink-0" />
+                          Timeline
+                        </NavLink>
+                        <NavLink
+                          to={`/orgs/${orgId}/projects/${project.id}/analytics`}
+                          className={({ isActive }) =>
+                            cn(
+                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                              isActive
+                                ? "bg-accent text-accent-foreground font-medium"
+                                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                            )
+                          }
+                        >
+                          <BarChart3 className="h-3.5 w-3.5 shrink-0" />
+                          Analytics
                         </NavLink>
                         {hasRole(role, "admin") && (
                           <NavLink

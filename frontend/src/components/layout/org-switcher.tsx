@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { ChevronsUpDown, Plus, Building2 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import {
@@ -24,6 +25,7 @@ export function OrgSwitcher() {
   const qc = useQueryClient()
   const { data: members } = useMembers(activeOrg?.id ?? "")
   const user = useAppStore((s) => s.user)
+  const activeMembership = useAppStore((s) => s.activeMembership)
 
   function switchOrg(org: Organization) {
     if (org.id === activeOrg?.id) return
@@ -39,10 +41,20 @@ export function OrgSwitcher() {
   }
 
   // Set first org as active if none selected
-  if (!activeOrg && orgs && orgs.length > 0) {
-    const myMembership = members?.find((m) => m.user_id === user?.id)
-    setActiveOrg(orgs[0], myMembership?.role ?? "member")
-  }
+  useEffect(() => {
+    if (!activeOrg && orgs && orgs.length > 0) {
+      setActiveOrg(orgs[0], "member")
+    }
+  }, [activeOrg, orgs, setActiveOrg])
+
+  // Sync actual role once members data loads (fixes stale "member" default for owners/admins)
+  useEffect(() => {
+    if (!activeOrg || !members || !user) return
+    const myMembership = members.find((m) => m.user_id === user.id)
+    if (myMembership && myMembership.role !== activeMembership?.role) {
+      setActiveOrg(activeOrg, myMembership.role)
+    }
+  }, [activeOrg, members, user, activeMembership?.role, setActiveOrg])
 
   if (isLoading) return <Skeleton className="h-9 w-full" />
 

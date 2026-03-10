@@ -5,8 +5,15 @@ export const createTaskSchema = z.object({
   description: z.string().max(5000).optional(),
   status: z.enum(["todo", "in_progress", "done", "blocked"]),
   priority: z.enum(["low", "medium", "high", "urgent"]),
+  issue_type: z.enum(["bug", "story", "epic", "task", "subtask"]).optional(),
   assignee_user_id: z.string().uuid().nullable().optional(),
+  parent_task_id: z.string().uuid().nullable().optional(),
+  sprint_id: z.string().uuid().nullable().optional(),
+  module_id: z.string().uuid().nullable().optional(),
   position: z.number().int().min(0).optional(),
+  story_points: z.number().int().min(0).max(100).nullable().optional(),
+  start_date: z.string().nullable().optional(),
+  due_date: z.string().nullable().optional(),
 })
 
 export const updateTaskSchema = z.object({
@@ -14,8 +21,15 @@ export const updateTaskSchema = z.object({
   description: z.string().max(5000).nullable().optional(),
   status: z.enum(["todo", "in_progress", "done", "blocked"]).optional(),
   priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+  issue_type: z.enum(["bug", "story", "epic", "task", "subtask"]).optional(),
   assignee_user_id: z.string().uuid().nullable().optional(),
+  parent_task_id: z.string().uuid().nullable().optional(),
+  sprint_id: z.string().uuid().nullable().optional(),
+  module_id: z.string().uuid().nullable().optional(),
   position: z.number().int().min(0).optional(),
+  story_points: z.number().int().min(0).max(100).nullable().optional(),
+  start_date: z.string().nullable().optional(),
+  due_date: z.string().nullable().optional(),
 })
 
 export const createLabelSchema = z.object({

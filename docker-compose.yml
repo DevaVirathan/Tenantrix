@@ -54,6 +54,18 @@ services:
       --reload
 
   # ---------------------------------------------------------------------------
+  # Mailhog — local SMTP server + web UI for dev email testing
+  # ---------------------------------------------------------------------------
+  mailhog:
+    image: mailhog/mailhog:latest
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    logging:
+      driver: none
+
+  # ---------------------------------------------------------------------------
   # Test runner — uses a separate test database
   # ---------------------------------------------------------------------------
   test:

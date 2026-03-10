@@ -1,12 +1,14 @@
-import { Navigate, Outlet } from "react-router-dom"
+import { Navigate, Outlet, useSearchParams } from "react-router-dom"
 import { useAppStore } from "@/store/app-store"
 
 export function AuthLayout() {
   const { accessToken } = useAppStore()
+  const [searchParams] = useSearchParams()
 
-  // Already logged in — redirect to orgs
+  // Already logged in — honor redirect param or go to orgs
   if (accessToken) {
-    return <Navigate to="/orgs" replace />
+    const redirect = searchParams.get("redirect")
+    return <Navigate to={redirect || "/orgs"} replace />
   }
 
   return (

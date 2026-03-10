@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
-  X, Trash2, GitBranch, Link2, Paperclip, UserCircle2,
+  X, Trash2, Paperclip, UserCircle2,
   AlertCircle, ArrowDown, ArrowRight, ArrowUp, CalendarDays,
+  Hexagon, Layers, Timer, Box,
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -14,15 +15,20 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { AssigneePicker } from "./assignee-picker"
+import { IssueTypeIcon } from "./issue-type-icon"
 import { LabelPicker } from "./label-picker"
+import { SubtaskList } from "./subtask-list"
+import { TaskRelations } from "./task-relations"
 import { useTask, useUpdateTask, useDeleteTask } from "@/hooks/use-tasks"
+import { useSprints } from "@/hooks/use-sprints"
+import { useModules } from "@/hooks/use-modules"
 import { CommentThread } from "./comment-thread"
 import { useAppStore } from "@/store/app-store"
 import { useMembers } from "@/hooks/use-members"
 import { hasRole } from "@/lib/rbac"
 import { updateTaskSchema, type UpdateTaskValues } from "@/validations/task.schema"
-import type { TaskStatus, TaskPriority } from "@/types/task"
-import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from "@/types/task"
+import type { TaskStatus, TaskPriority, IssueType } from "@/types/task"
+import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS, ISSUE_TYPE_LABELS } from "@/types/task"
 import { cn } from "@/lib/utils"
 
 interface TaskDetailPanelProps {
@@ -75,6 +81,7 @@ export function TaskDetailPanel({ orgId, projectId }: TaskDetailPanelProps) {
   const taskPanelOpen = useAppStore((s) => s.taskPanelOpen)
   const activeTaskId = useAppStore((s) => s.activeTaskId)
   const closeTaskPanel = useAppStore((s) => s.closeTaskPanel)
+  const openTaskPanel = useAppStore((s) => s.openTaskPanel)
   const membership = useAppStore((s) => s.activeMembership)
   const user = useAppStore((s) => s.user)
 
@@ -85,6 +92,8 @@ export function TaskDetailPanel({ orgId, projectId }: TaskDetailPanelProps) {
   const { mutate: updateTask, isPending: isUpdating } = useUpdateTask(orgId, projectId)
   const { mutate: deleteTask, isPending: isDeleting } = useDeleteTask(orgId, projectId)
   const { data: members = [] } = useMembers(orgId)
+  const { data: sprints = [] } = useSprints(orgId, projectId)
+  const { data: modules = [] } = useModules(orgId, projectId)
 
   // ── Inline title editing ──────────────────────────────────────────────────
   const [editingTitle, setEditingTitle] = useState(false)
@@ -153,7 +162,12 @@ export function TaskDetailPanel({ orgId, projectId }: TaskDetailPanelProps) {
     : null
   const assigneeName = assignee ? (assignee.full_name ?? assignee.email ?? "Unassigned") : null
 
-  const createdByUser = user  // Task schema doesn't have created_by yet — show current user context
+  const createdByMember = task?.created_by_user_id
+    ? members.find((m) => m.user_id === task.created_by_user_id)
+    : null
+  const createdByName = createdByMember
+    ? (createdByMember.full_name ?? createdByMember.email ?? "Unknown")
+    : null
 
   const statuses = Object.entries(TASK_STATUS_LABELS) as [TaskStatus, string][]
   const priorities = Object.keys(TASK_PRIORITY_LABELS) as TaskPriority[]
@@ -249,21 +263,42 @@ export function TaskDetailPanel({ orgId, projectId }: TaskDetailPanelProps) {
                 </div>
               )}
 
-              {/* Action bar */}
+              {/* Parent breadcrumb */}
+              {task.parent && (
+                <button
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => openTaskPanel(task.parent!.id)}
+                >
+                  <IssueTypeIcon type={task.parent.issue_type} className="h-3 w-3" />
+                  <span className="truncate max-w-xs">{task.parent.title}</span>
+                  <span className="text-muted-foreground/60">/ sub-task</span>
+                </button>
+              )}
+
+              {/* Sub-tasks */}
+              <SubtaskList
+                orgId={orgId}
+                projectId={projectId}
+                parentTaskId={task.id}
+                subtasks={task.subtasks}
+                canEdit={canEdit}
+              />
+
+              {/* Relations */}
+              <TaskRelations
+                orgId={orgId}
+                projectId={projectId}
+                taskId={task.id}
+                links={task.links}
+                canEdit={canEdit}
+              />
+
+              {/* Action bar (remaining placeholders) */}
               <div className="flex items-center gap-1 flex-wrap">
-                {[
-                  { icon: GitBranch, label: "Add sub-work item" },
-                  { icon: Link2, label: "Add relation" },
-                  { icon: Paperclip, label: "Attach" },
-                ].map(({ icon: Icon, label }) => (
-                  <button
-                    key={label}
-                    className="flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    {label}
-                  </button>
-                ))}
+                <button className="flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
+                  <Paperclip className="h-3.5 w-3.5" />
+                  Attach
+                </button>
               </div>
 
               <Separator />
@@ -375,15 +410,154 @@ export function TaskDetailPanel({ orgId, projectId }: TaskDetailPanelProps) {
                 </Select>
               </PropRow>
 
+              {/* Issue Type */}
+              <PropRow icon={Layers} label="Type">
+                <Select
+                  value={task.issue_type}
+                  onValueChange={(v) => handlePropChange({ issue_type: v as IssueType })}
+                  disabled={!canEdit || isUpdating}
+                >
+                  <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none px-1 hover:bg-accent focus:ring-0 w-full justify-start gap-1.5">
+                    <IssueTypeIcon type={task.issue_type} />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.entries(ISSUE_TYPE_LABELS) as [IssueType, string][]).map(([v, label]) => (
+                      <SelectItem key={v} value={v}>
+                        <span className="flex items-center gap-2">
+                          <IssueTypeIcon type={v} />
+                          {label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </PropRow>
+
+              {/* Story Points */}
+              <PropRow icon={Hexagon} label="Points">
+                {canEdit ? (
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={task.story_points ?? ""}
+                    placeholder="—"
+                    className="h-7 w-16 rounded border-0 bg-transparent text-xs px-1 hover:bg-accent focus:ring-1 focus:ring-ring focus:outline-none"
+                    onChange={(e) => {
+                      const val = e.target.value === "" ? null : Number(e.target.value)
+                      handlePropChange({ story_points: val })
+                    }}
+                    disabled={isUpdating}
+                  />
+                ) : (
+                  <span className="text-xs px-1">{task.story_points ?? "—"}</span>
+                )}
+              </PropRow>
+
+              {/* Start Date */}
+              <PropRow icon={CalendarDays} label="Start date">
+                {canEdit ? (
+                  <input
+                    type="date"
+                    value={task.start_date ? task.start_date.slice(0, 10) : ""}
+                    className="h-7 rounded border-0 bg-transparent text-xs px-1 hover:bg-accent focus:ring-1 focus:ring-ring focus:outline-none"
+                    onChange={(e) => {
+                      const val = e.target.value ? new Date(e.target.value).toISOString() : null
+                      handlePropChange({ start_date: val })
+                    }}
+                    disabled={isUpdating}
+                  />
+                ) : (
+                  <span className="text-xs px-1">
+                    {task.start_date ? new Date(task.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                  </span>
+                )}
+              </PropRow>
+
+              {/* Due Date */}
+              <PropRow icon={CalendarDays} label="Due date">
+                {canEdit ? (
+                  <input
+                    type="date"
+                    value={task.due_date ? task.due_date.slice(0, 10) : ""}
+                    className="h-7 rounded border-0 bg-transparent text-xs px-1 hover:bg-accent focus:ring-1 focus:ring-ring focus:outline-none"
+                    onChange={(e) => {
+                      const val = e.target.value ? new Date(e.target.value).toISOString() : null
+                      handlePropChange({ due_date: val })
+                    }}
+                    disabled={isUpdating}
+                  />
+                ) : (
+                  <span className="text-xs px-1">
+                    {task.due_date ? new Date(task.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                  </span>
+                )}
+              </PropRow>
+
+              {/* Sprint */}
+              <PropRow icon={Timer} label="Sprint">
+                {canEdit ? (
+                  <Select
+                    value={task.sprint_id ?? "__none__"}
+                    onValueChange={(v) => handlePropChange({ sprint_id: v === "__none__" ? null : v })}
+                    disabled={isUpdating}
+                  >
+                    <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none px-1 hover:bg-accent focus:ring-0 w-full justify-start gap-1.5">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">No sprint</SelectItem>
+                      {sprints
+                        .filter((s) => s.status !== "closed")
+                        .map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <span className="text-xs px-1">
+                    {sprints.find((s) => s.id === task.sprint_id)?.name ?? "None"}
+                  </span>
+                )}
+              </PropRow>
+
+              {/* Module */}
+              <PropRow icon={Box} label="Module">
+                {canEdit ? (
+                  <Select
+                    value={task.module_id ?? "__none__"}
+                    onValueChange={(v) => handlePropChange({ module_id: v === "__none__" ? null : v })}
+                    disabled={isUpdating}
+                  >
+                    <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none px-1 hover:bg-accent focus:ring-0 w-full justify-start gap-1.5">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">No module</SelectItem>
+                      {modules
+                        .filter((m) => m.status !== "closed")
+                        .map((m) => (
+                          <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <span className="text-xs px-1">
+                    {modules.find((m) => m.id === task.module_id)?.name ?? "None"}
+                  </span>
+                )}
+              </PropRow>
+
               {/* Created by */}
               <PropRow icon={UserCircle2} label="Created by">
                 <span className="flex items-center gap-1.5 text-xs px-1">
                   <Avatar className="h-5 w-5">
                     <AvatarFallback className="text-[10px] bg-primary/20 text-primary">
-                      {initials(createdByUser?.full_name ?? createdByUser?.email ?? "?")}
+                      {initials(createdByName ?? "?")}
                     </AvatarFallback>
                   </Avatar>
-                  {createdByUser?.full_name ?? createdByUser?.email ?? "—"}
+                  {createdByName ?? "—"}
                 </span>
               </PropRow>
 

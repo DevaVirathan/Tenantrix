@@ -22,6 +22,9 @@ export function useTasks(orgId: string, projectId: string, filters?: TaskFilters
   if (filters?.status) params.status = filters.status
   if (filters?.priority) params.priority = filters.priority
   if (filters?.assignee_user_id) params.assignee_user_id = filters.assignee_user_id
+  if (filters?.issue_type) params.issue_type = filters.issue_type
+  if (filters?.sprint_id) params.sprint_id = filters.sprint_id
+  if (filters?.no_sprint) params.no_sprint = "true"
 
   return useQuery({
     queryKey: queryKeys.tasks(orgId, projectId, filters as Record<string, unknown>),
@@ -54,7 +57,7 @@ export function useCreateTask(orgId: string, projectId: string) {
         .post(`organizations/${orgId}/projects/${projectId}/tasks`, { json: data })
         .json<Task>(),
     onSuccess: (task) => {
-      qc.invalidateQueries({ queryKey: queryKeys.tasks(orgId, projectId) })
+      qc.invalidateQueries({ queryKey: ["org", orgId, "project", projectId, "tasks"] })
       toast.success(`Task "${task.title}" created`)
     },
     onError: async (err: unknown) => {
@@ -72,11 +75,12 @@ export function useUpdateTask(orgId: string, projectId: string) {
         .json<Task>(),
     onSuccess: (task) => {
       qc.setQueryData(queryKeys.task(orgId, task.id), task)
-      qc.invalidateQueries({ queryKey: queryKeys.tasks(orgId, projectId) })
+      qc.invalidateQueries({ queryKey: ["org", orgId, "project", projectId, "tasks"] })
+      qc.invalidateQueries({ queryKey: queryKeys.taskActivity(orgId, task.id) })
     },
     onError: async (err: unknown) => {
       toast.error((await extractDetail(err)) ?? "Failed to update task")
-      qc.invalidateQueries({ queryKey: queryKeys.tasks(orgId, projectId) })
+      qc.invalidateQueries({ queryKey: ["org", orgId, "project", projectId, "tasks"] })
     },
   })
 }
@@ -87,7 +91,7 @@ export function useDeleteTask(orgId: string, projectId: string) {
     mutationFn: (taskId: string) =>
       apiClient.delete(`organizations/${orgId}/tasks/${taskId}`).then(() => undefined),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.tasks(orgId, projectId) })
+      qc.invalidateQueries({ queryKey: ["org", orgId, "project", projectId, "tasks"] })
       toast.success("Task deleted")
     },
     onError: async (err: unknown) => {
@@ -105,7 +109,7 @@ export function useAddLabel(orgId: string, projectId: string, taskId: string) {
         .json<Task>(),
     onSuccess: (task) => {
       qc.setQueryData(queryKeys.task(orgId, taskId), task)
-      qc.invalidateQueries({ queryKey: queryKeys.tasks(orgId, projectId) })
+      qc.invalidateQueries({ queryKey: ["org", orgId, "project", projectId, "tasks"] })
     },
     onError: async (err: unknown) => {
       toast.error((await extractDetail(err)) ?? "Failed to add label")
@@ -122,7 +126,7 @@ export function useRemoveLabel(orgId: string, projectId: string, taskId: string)
         .then(() => undefined),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.task(orgId, taskId) })
-      qc.invalidateQueries({ queryKey: queryKeys.tasks(orgId, projectId) })
+      qc.invalidateQueries({ queryKey: ["org", orgId, "project", projectId, "tasks"] })
     },
     onError: async (err: unknown) => {
       toast.error((await extractDetail(err)) ?? "Failed to remove label")

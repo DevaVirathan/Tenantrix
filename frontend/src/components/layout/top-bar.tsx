@@ -1,6 +1,7 @@
 import { Moon, Sun, ChevronRight } from "lucide-react"
 import { Link, useParams, useMatches } from "react-router-dom"
 import { Button } from "@/components/ui/button"
+import { NotificationBell } from "@/components/layout/notification-bell"
 import { UserMenu } from "@/components/layout/user-menu"
 import { useTheme } from "@/providers/theme-provider"
 import { useAppStore } from "@/store/app-store"
@@ -94,6 +95,7 @@ export function TopBar() {
         {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
       </Button>
 
+      <NotificationBell />
       <UserMenu />
     </header>
   )

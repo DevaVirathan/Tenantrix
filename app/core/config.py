@@ -65,6 +65,18 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = 60
 
     # ------------------------------------------------------------------ #
+    # SMTP / Email                                                         #
+    # ------------------------------------------------------------------ #
+    SMTP_HOST: str = "localhost"
+    SMTP_PORT: int = 1025
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_USE_TLS: bool = False
+    MAIL_FROM_EMAIL: str = "noreply@tenantrix.io"
+    MAIL_FROM_NAME: str = "Tenantrix"
+    FRONTEND_URL: str = "http://localhost:5173"
+
+    # ------------------------------------------------------------------ #
     # CORS                                                                 #
     # ------------------------------------------------------------------ #
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://localhost:5174,http://localhost:5175"

@@ -7,8 +7,9 @@ import {
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { PriorityIcon } from "./priority-icon"
-import type { TaskFilters, TaskStatus, TaskPriority } from "@/types/task"
-import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from "@/types/task"
+import { IssueTypeIcon } from "./issue-type-icon"
+import type { TaskFilters, TaskStatus, TaskPriority, IssueType } from "@/types/task"
+import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS, ISSUE_TYPE_LABELS } from "@/types/task"
 import { useMembers } from "@/hooks/use-members"
 
 interface TaskFiltersBarProps {
@@ -22,7 +23,7 @@ const ALL = "__all__"
 export function TaskFiltersBar({ orgId, filters, onChange }: TaskFiltersBarProps) {
   const { data: members = [] } = useMembers(orgId)
 
-  const hasFilters = !!(filters.status || filters.priority || filters.assignee_user_id)
+  const hasFilters = !!(filters.status || filters.priority || filters.assignee_user_id || filters.issue_type)
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
@@ -76,6 +77,27 @@ export function TaskFiltersBar({ orgId, filters, onChange }: TaskFiltersBarProps
           {members.map((m) => (
             <SelectItem key={m.user_id} value={m.user_id}>
               {m.full_name ?? m.email ?? m.user_id}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {/* Issue Type */}
+      <Select
+        value={filters.issue_type ?? ALL}
+        onValueChange={(v) => onChange({ ...filters, issue_type: v === ALL ? undefined : v as IssueType })}
+      >
+        <SelectTrigger className="h-8 w-36 text-xs">
+          <SelectValue placeholder="Type" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL}>All types</SelectItem>
+          {(Object.entries(ISSUE_TYPE_LABELS) as [IssueType, string][]).map(([v, label]) => (
+            <SelectItem key={v} value={v}>
+              <span className="flex items-center gap-1.5">
+                <IssueTypeIcon type={v} />
+                {label}
+              </span>
             </SelectItem>
           ))}
         </SelectContent>

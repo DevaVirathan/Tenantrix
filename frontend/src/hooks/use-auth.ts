@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { apiClient } from "@/lib/api-client"
 import { queryKeys } from "@/lib/query-keys"
 import { useAppStore } from "@/store/app-store"
@@ -27,6 +27,7 @@ export function useCurrentUser() {
 // POST /auth/register
 export function useRegister() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { setTokens, setUser } = useAppStore()
   const queryClient = useQueryClient()
 
@@ -51,7 +52,8 @@ export function useRegister() {
         .json<User>()
       setUser(user)
       queryClient.setQueryData(queryKeys.user(), user)
-      navigate("/orgs")
+      const redirect = searchParams.get("redirect")
+      navigate(redirect || "/orgs")
     },
   })
 }
@@ -59,6 +61,7 @@ export function useRegister() {
 // POST /auth/login
 export function useLogin() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { setTokens, setUser } = useAppStore()
   const queryClient = useQueryClient()
 
@@ -77,7 +80,8 @@ export function useLogin() {
         .json<User>()
       setUser(user)
       queryClient.setQueryData(queryKeys.user(), user)
-      navigate("/orgs")
+      const redirect = searchParams.get("redirect")
+      navigate(redirect || "/orgs")
     },
   })
 }

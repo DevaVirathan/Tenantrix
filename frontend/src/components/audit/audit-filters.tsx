@@ -42,12 +42,12 @@ export function AuditFiltersBar({ filters, onChange }: AuditFiltersProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       {/* Action filter */}
-      <Select value={filters.action ?? ""} onValueChange={(v) => set("action", v || undefined)}>
+      <Select value={filters.action ?? "__all__"} onValueChange={(v) => set("action", v === "__all__" ? undefined : v)}>
         <SelectTrigger className="h-8 w-48 text-xs">
           <SelectValue placeholder="All actions" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All actions</SelectItem>
+          <SelectItem value="__all__">All actions</SelectItem>
           {ACTIONS.map((a) => (
             <SelectItem key={a} value={a}>{a}</SelectItem>
           ))}
@@ -56,14 +56,14 @@ export function AuditFiltersBar({ filters, onChange }: AuditFiltersProps) {
 
       {/* Resource type filter */}
       <Select
-        value={filters.resource_type ?? ""}
-        onValueChange={(v) => set("resource_type", v || undefined)}
+        value={filters.resource_type ?? "__all__"}
+        onValueChange={(v) => set("resource_type", v === "__all__" ? undefined : v)}
       >
         <SelectTrigger className="h-8 w-40 text-xs">
           <SelectValue placeholder="All types" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All types</SelectItem>
+          <SelectItem value="__all__">All types</SelectItem>
           {RESOURCE_TYPES.map((rt) => (
             <SelectItem key={rt} value={rt}>{rt}</SelectItem>
           ))}

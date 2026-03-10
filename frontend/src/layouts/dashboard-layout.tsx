@@ -2,6 +2,7 @@ import { Outlet, useParams } from "react-router-dom"
 import { AuthGuard } from "@/components/shared/auth-guard"
 import { TopBar } from "@/components/layout/top-bar"
 import { Sidebar } from "@/components/layout/sidebar"
+import { CommandPalette } from "@/components/layout/command-palette"
 
 export function DashboardLayout() {
   const { orgId } = useParams<{ orgId?: string }>()
@@ -16,6 +17,7 @@ export function DashboardLayout() {
             <Outlet />
           </main>
         </div>
+        <CommandPalette />
       </div>
     </AuthGuard>
   )

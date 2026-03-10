@@ -17,8 +17,9 @@ import { AssigneePicker } from "./assignee-picker"
 import { PriorityIcon } from "./priority-icon"
 import { createTaskSchema, type CreateTaskValues } from "@/validations/task.schema"
 import { useCreateTask } from "@/hooks/use-tasks"
-import type { TaskStatus } from "@/types/task"
-import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from "@/types/task"
+import type { TaskStatus, IssueType } from "@/types/task"
+import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS, ISSUE_TYPE_LABELS } from "@/types/task"
+import { IssueTypeIcon } from "./issue-type-icon"
 
 interface CreateTaskDialogProps {
   orgId: string
@@ -38,8 +39,12 @@ export function CreateTaskDialog({ orgId, projectId, defaultStatus = "todo", chi
       description: "",
       status: defaultStatus,
       priority: "medium" as const,
+      issue_type: "task" as const,
       assignee_user_id: null,
       position: 0,
+      story_points: null,
+      start_date: null,
+      due_date: null,
     },
   })
 
@@ -127,6 +132,89 @@ export function CreateTaskDialog({ orgId, projectId, defaultStatus = "todo", chi
                         ))}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="issue_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Type</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? "task"}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {(Object.entries(ISSUE_TYPE_LABELS) as [IssueType, string][]).map(([v, label]) => (
+                          <SelectItem key={v} value={v}>
+                            <span className="flex items-center gap-2">
+                              <IssueTypeIcon type={v} />
+                              {label}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="story_points"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Points <span className="text-muted-foreground">(optional)</span></FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        placeholder="—"
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="start_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Start date <span className="text-muted-foreground">(optional)</span></FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        value={field.value ? field.value.slice(0, 10) : ""}
+                        onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value).toISOString() : null)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="due_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Due date <span className="text-muted-foreground">(optional)</span></FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        value={field.value ? field.value.slice(0, 10) : ""}
+                        onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value).toISOString() : null)}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

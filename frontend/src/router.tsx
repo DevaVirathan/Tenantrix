@@ -12,6 +12,11 @@ import { OrgSettingsPage } from "@/pages/orgs/settings"
 import { ProjectsPage } from "@/pages/orgs/projects/index"
 import { ProjectSettingsPage } from "@/pages/orgs/projects/[projectId]/settings"
 import { KanbanBoardPage } from "@/pages/orgs/projects/[projectId]/board"
+import { BacklogPage } from "@/pages/orgs/projects/[projectId]/backlog"
+import { ListViewPage } from "@/pages/orgs/projects/[projectId]/list"
+import { CalendarViewPage } from "@/pages/orgs/projects/[projectId]/calendar"
+import { TimelineViewPage } from "@/pages/orgs/projects/[projectId]/timeline"
+import { AnalyticsPage } from "@/pages/orgs/projects/[projectId]/analytics"
 import { AuditLogsPage } from "@/pages/orgs/audit-logs"
 
 function NotFoundPage() {
@@ -36,8 +41,11 @@ export const router = createBrowserRouter([
     children: [
       { path: "/login", element: <LoginPage /> },
       { path: "/register", element: <RegisterPage /> },
-      { path: "/invite/:token", element: <AcceptInvitePage /> },
     ],
+  },
+  {
+    path: "/invite/:token",
+    element: <AcceptInvitePage />,
   },
   {
     element: <DashboardLayout />,
@@ -51,6 +59,11 @@ export const router = createBrowserRouter([
       { path: "/orgs/:orgId/projects", element: <ProjectsPage /> },
       { path: "/orgs/:orgId/projects/:projectId", element: <ProjectSettingsPage /> },
       { path: "/orgs/:orgId/projects/:projectId/board", element: <KanbanBoardPage /> },
+      { path: "/orgs/:orgId/projects/:projectId/backlog", element: <BacklogPage /> },
+      { path: "/orgs/:orgId/projects/:projectId/list", element: <ListViewPage /> },
+      { path: "/orgs/:orgId/projects/:projectId/calendar", element: <CalendarViewPage /> },
+      { path: "/orgs/:orgId/projects/:projectId/timeline", element: <TimelineViewPage /> },
+      { path: "/orgs/:orgId/projects/:projectId/analytics", element: <AnalyticsPage /> },
       { path: "/orgs/:orgId/audit-logs", element: <AuditLogsPage /> },
     ],
   },

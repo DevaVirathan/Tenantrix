@@ -1,36 +1,43 @@
 import { useEffect, useState } from "react"
-import { useParams, useNavigate } from "react-router-dom"
-import { CheckCircle, XCircle, Loader2 } from "lucide-react"
+import { useParams, useNavigate, Link } from "react-router-dom"
+import { CheckCircle, XCircle, Loader2, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { apiClient } from "@/lib/api-client"
+import { useAppStore } from "@/store/app-store"
 
-interface AcceptInviteResponse {
-  organization_id: string
-  message: string
-}
-
-type Status = "loading" | "success" | "error"
+type Status = "checking" | "accepting" | "success" | "error" | "needs-auth"
 
 export function AcceptInvitePage() {
   const { token } = useParams<{ token: string }>()
   const navigate = useNavigate()
-  const [status, setStatus] = useState<Status>("loading")
+  const accessToken = useAppStore((s) => s.accessToken)
+  const [status, setStatus] = useState<Status>("checking")
   const [orgId, setOrgId] = useState<string | null>(null)
-  const [errorMessage, setErrorMessage] = useState<string>("Invalid or expired invite link.")
+  const [errorMessage, setErrorMessage] = useState("Invalid or expired invite link.")
+
+  const inviteUrl = `/invite/${token}`
 
   useEffect(() => {
     if (!token) {
-      setStatus("error")
       setErrorMessage("No invite token found.")
+      setStatus("error")
       return
     }
 
+    // If not logged in, prompt auth
+    if (!accessToken) {
+      setStatus("needs-auth")
+      return
+    }
+
+    // Logged in — accept the invite
+    setStatus("accepting")
     apiClient
       .post(`organizations/invites/accept/${token}`)
-      .json<AcceptInviteResponse>()
+      .json<{ id: string }>()
       .then((data) => {
-        setOrgId(data.organization_id)
+        setOrgId(data.id)
         setStatus("success")
       })
       .catch(async (err: unknown) => {
@@ -40,16 +47,29 @@ export function AcceptInvitePage() {
             const body = await (err as { response: Response }).response.json() as { detail?: string }
             if (body.detail) msg = body.detail
           } catch {
-            // ignore JSON parse errors
+            // ignore
           }
         }
         setErrorMessage(msg)
         setStatus("error")
       })
-  }, [token])
+  }, [token, accessToken])
 
-  if (status === "loading") {
-    return (
+  // Wrapper for centered layout (since this page is outside AuthLayout)
+  const wrapper = (children: React.ReactNode) => (
+    <div className="min-h-svh bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="mb-8 text-center">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Tenantrix</h1>
+          <p className="text-sm text-muted-foreground mt-1">Multi-tenant project management</p>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+
+  if (status === "checking" || status === "accepting") {
+    return wrapper(
       <Card>
         <CardHeader>
           <CardTitle>Accepting invite…</CardTitle>
@@ -62,8 +82,39 @@ export function AcceptInvitePage() {
     )
   }
 
+  if (status === "needs-auth") {
+    return wrapper(
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5 text-primary" />
+            You've been invited!
+          </CardTitle>
+          <CardDescription>
+            Sign in or create an account to accept this invitation and join the organization.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Button className="w-full" asChild>
+            <Link to={`/login?redirect=${encodeURIComponent(inviteUrl)}`}>
+              Sign in to accept
+            </Link>
+          </Button>
+          <Button variant="outline" className="w-full" asChild>
+            <Link to={`/register?redirect=${encodeURIComponent(inviteUrl)}`}>
+              Create an account
+            </Link>
+          </Button>
+          <p className="text-xs text-muted-foreground text-center pt-2">
+            Make sure to use the same email address the invite was sent to.
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+
   if (status === "success") {
-    return (
+    return wrapper(
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -84,7 +135,8 @@ export function AcceptInvitePage() {
     )
   }
 
-  return (
+  // Error state
+  return wrapper(
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -94,8 +146,8 @@ export function AcceptInvitePage() {
         <CardDescription>{errorMessage}</CardDescription>
       </CardHeader>
       <CardContent>
-        <Button variant="outline" className="w-full" onClick={() => navigate("/login")}>
-          Back to login
+        <Button variant="outline" className="w-full" onClick={() => navigate("/orgs")}>
+          Go to dashboard
         </Button>
       </CardContent>
     </Card>

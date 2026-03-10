@@ -46,27 +46,41 @@ function avatarColor(name: string) {
   return AVATAR_COLORS[hash]
 }
 
-/** Convert an audit action string into a human-readable sentence (short form for activity feed) */
-function activitySentence(log: AuditLog): string {
+/** Convert an audit action string into a human-readable sentence (Plane-style activity feed) */
+function activitySentence(log: AuditLog): { text: string; bold?: string } {
   const meta = log.metadata ?? {}
   switch (log.action) {
-    case "task.created":    return "created the work item."
-    case "task.updated":    return "updated the work item."
-    case "task.deleted":    return "deleted the work item."
+    case "task.created":
+      return { text: "created the work item." }
+    case "task.deleted":
+      return { text: "deleted the work item." }
+    case "task.field_updated": {
+      const field = String(meta.field ?? "")
+      const newVal = String(meta.new_value ?? "")
+      if (field === "assignee" && newVal && newVal !== "none")
+        return { text: "added a new assignee", bold: newVal }
+      if (field === "assignee" && newVal === "none")
+        return { text: "removed the assignee." }
+      if (newVal === "none")
+        return { text: `removed the ${field}.` }
+      return { text: `set the ${field} to`, bold: newVal }
+    }
     case "task.label_added":
-      return `added a new label ${String(meta.label ?? "")}.`
+      return { text: "added a new label", bold: String(meta.label ?? "") }
     case "task.label_removed":
-      return `removed the label ${String(meta.label ?? "")}.`
-    case "member.role_changed":
-      return `changed role to ${String(meta.new_role ?? "unknown")}.`
+      return { text: "removed the label", bold: String(meta.label ?? "") }
+    case "task.link_created":
+      return { text: `linked this work item (${String(meta.link_type ?? "relates to")}).` }
+    case "task.link_deleted":
+      return { text: "removed a link from this work item." }
+    case "task.updated":
+      return { text: "updated the work item." }
     default: {
-      // Generic: turn "task.status_updated" → "updated status to In Progress."
-      const [, verb] = log.action.split(".")
       const field = String(meta.field ?? "")
       const newVal = String(meta.new_value ?? meta.to ?? "")
-      if (field && newVal) return `set the ${field} to ${newVal}.`
-      if (newVal) return `updated ${verb ?? log.action} to ${newVal}.`
-      return `${(verb ?? log.action).replace(/_/g, " ")}.`
+      if (field && newVal) return { text: `set the ${field} to`, bold: newVal }
+      const [, verb] = log.action.split(".")
+      return { text: `${(verb ?? log.action).replace(/_/g, " ")}.` }
     }
   }
 }
@@ -153,7 +167,14 @@ export function CommentThread({ orgId, taskId }: CommentThreadProps) {
                     <span className="text-xs text-foreground">
                       <span className="font-semibold">{actorName}</span>
                       {" "}
-                      <span className="text-muted-foreground">{activitySentence(item.log)}</span>
+                      <span className="text-muted-foreground">
+                        {(() => {
+                          const { text, bold } = activitySentence(item.log)
+                          return bold
+                            ? <>{text} <span className="font-semibold text-foreground">{bold}</span>.</>
+                            : text
+                        })()}
+                      </span>
                     </span>
                     <span className="text-xs text-muted-foreground/60 shrink-0 whitespace-nowrap">
                       {relativeTime(item.log.created_at)}
