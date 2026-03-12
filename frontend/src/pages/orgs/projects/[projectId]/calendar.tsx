@@ -3,10 +3,9 @@ import { useParams } from "react-router-dom"
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react"
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek,
-  addMonths, subMonths, eachDayOfInterval, format, isSameMonth, isSameDay, isToday,
+  addMonths, subMonths, eachDayOfInterval, format, isSameMonth, isToday,
 } from "date-fns"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { IssueTypeIcon } from "@/components/task/issue-type-icon"
 import { TaskDetailPanel } from "@/components/task/task-detail-panel"
 import { CreateTaskDialog } from "@/components/task/create-task-dialog"

@@ -16,6 +16,11 @@ interface SearchResult {
   title: string
   status?: string
   project_id?: string
+  project_name?: string
+  identifier?: string | null
+  sequence_id?: number | null
+  state_name?: string | null
+  state_color?: string | null
   description?: string | null
 }
 
@@ -85,7 +90,7 @@ export function CommandPalette() {
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setQuery("") }}>
-      <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden">
+      <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden" aria-label="Search tasks and projects">
         <div className="flex items-center border-b px-3">
           <Search className="h-4 w-4 text-muted-foreground shrink-0" />
           <Input
@@ -123,7 +128,25 @@ export function CommandPalette() {
               )}
               <div className="flex-1 min-w-0">
                 <p className="truncate">{result.title}</p>
-                <p className="text-xs text-muted-foreground capitalize">{result.type}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {result.type === "task" && result.identifier && result.sequence_id != null && (
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                      {result.identifier}-{result.sequence_id}
+                    </span>
+                  )}
+                  {result.state_color && result.state_name && (
+                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: result.state_color }} />
+                      {result.state_name}
+                    </span>
+                  )}
+                  {result.project_name && result.type === "task" && (
+                    <span className="text-[10px] text-muted-foreground truncate">{result.project_name}</span>
+                  )}
+                  {result.type === "project" && (
+                    <span className="text-[10px] text-muted-foreground">Project</span>
+                  )}
+                </div>
               </div>
             </button>
           ))}

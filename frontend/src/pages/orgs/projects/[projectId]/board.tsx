@@ -19,11 +19,11 @@ import { TaskFiltersBar } from "@/components/task/task-filters"
 import { CreateTaskDialog } from "@/components/task/create-task-dialog"
 import { useProject } from "@/hooks/use-projects"
 import { useTasks, useUpdateTask } from "@/hooks/use-tasks"
+import { useProjectStates } from "@/hooks/use-project-states"
 import { useAppStore } from "@/store/app-store"
 import { useQueryClient } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/query-keys"
-import type { Task, TaskStatus, TaskFilters } from "@/types/task"
-import { KANBAN_COLUMNS } from "@/types/task"
+import type { Task, TaskFilters } from "@/types/task"
 
 export function KanbanBoardPage() {
   const { orgId = "", projectId = "" } = useParams<{ orgId: string; projectId: string }>()
@@ -33,20 +33,36 @@ export function KanbanBoardPage() {
   const [activeTask, setActiveTask] = useState<Task | null>(null)
 
   const { data: project } = useProject(orgId, projectId)
-  const { data: tasks = [], isLoading } = useTasks(orgId, projectId, filters)
+  const { data: tasks = [], isLoading: tasksLoading } = useTasks(orgId, projectId, filters)
+  const { data: states = [], isLoading: statesLoading } = useProjectStates(orgId, projectId)
   const { mutate: updateTask } = useUpdateTask(orgId, projectId)
 
   const membership = useAppStore((s) => s.activeMembership)
   const canCreate = membership?.role && ["member", "admin", "owner"].includes(membership.role)
 
-  // Group tasks by status
-  const tasksByStatus = useMemo(() => {
-    const map: Record<TaskStatus, Task[]> = {
-      todo: [], in_progress: [], done: [], blocked: [],
+  const isLoading = tasksLoading || statesLoading
+
+  // Group tasks by state_id
+  const tasksByState = useMemo(() => {
+    const map: Record<string, Task[]> = {}
+    for (const state of states) {
+      map[state.id] = []
     }
-    for (const task of tasks) map[task.status].push(task)
+    for (const task of tasks) {
+      const stateId = task.state_id
+      if (stateId && map[stateId]) {
+        map[stateId].push(task)
+      } else if (states.length > 0) {
+        // Task has no state — put in first column
+        map[states[0].id] = map[states[0].id] || []
+        map[states[0].id].push(task)
+      }
+    }
     return map
-  }, [tasks])
+  }, [tasks, states])
+
+  // Build a set of state IDs for quick lookup
+  const stateIdSet = useMemo(() => new Set(states.map((s) => s.id)), [states])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -70,38 +86,48 @@ export function KanbanBoardPage() {
     const task = tasks.find((t) => t.id === taskId)
     if (!task) return
 
-    // over.id is either a column status or another task id
-    const overIsColumn = KANBAN_COLUMNS.includes(over.id as TaskStatus)
-    const newStatus: TaskStatus = overIsColumn
-      ? (over.id as TaskStatus)
-      : (tasks.find((t) => t.id === over.id)?.status ?? task.status)
+    // over.id is either a state id (column) or another task id
+    const overIsColumn = stateIdSet.has(over.id as string)
+    const newStateId: string = overIsColumn
+      ? (over.id as string)
+      : (tasks.find((t) => t.id === over.id)?.state_id ?? task.state_id ?? "")
 
-    if (newStatus === task.status) {
+    if (!newStateId) return
+
+    if (newStateId === task.state_id) {
       // Reorder within the same column
-      const col = tasksByStatus[task.status]
+      const col = tasksByState[task.state_id!] ?? []
       const oldIdx = col.findIndex((t) => t.id === taskId)
       const newIdx = col.findIndex((t) => t.id === over.id)
       if (oldIdx !== newIdx && newIdx !== -1) {
         const reordered = arrayMove(col, oldIdx, newIdx)
-        // Optimistic update
         const updated = tasks.map((t) => {
           const idx = reordered.findIndex((r) => r.id === t.id)
           return idx !== -1 ? { ...t, position: idx } : t
         })
-        qc.setQueryData(queryKeys.tasks(orgId, projectId), updated)
+        qc.setQueryData(queryKeys.tasks(orgId, projectId, filters as Record<string, unknown>), updated)
         updateTask({ taskId, data: { position: newIdx } })
       }
     } else {
-      // Cross-column drag
-      const newCol = tasksByStatus[newStatus]
+      // Cross-column drag — update state_id
+      const newCol = tasksByState[newStateId] ?? []
       const newPosition = newCol.length
 
-      // Optimistic update
+      const targetState = states.find((s) => s.id === newStateId)
       const updated = tasks.map((t) =>
-        t.id === taskId ? { ...t, status: newStatus, position: newPosition } : t
+        t.id === taskId
+          ? {
+              ...t,
+              state_id: newStateId,
+              state: targetState
+                ? { id: targetState.id, name: targetState.name, color: targetState.color, group: targetState.group }
+                : t.state,
+              position: newPosition,
+            }
+          : t
       )
-      qc.setQueryData(queryKeys.tasks(orgId, projectId), updated)
-      updateTask({ taskId, data: { status: newStatus, position: newPosition } })
+      qc.setQueryData(queryKeys.tasks(orgId, projectId, filters as Record<string, unknown>), updated)
+      updateTask({ taskId, data: { state_id: newStateId, position: newPosition } })
     }
   }
 
@@ -128,7 +154,7 @@ export function KanbanBoardPage() {
       </div>
 
       {/* Filters */}
-      <TaskFiltersBar orgId={orgId} filters={filters} onChange={setFilters} />
+      <TaskFiltersBar orgId={orgId} projectId={projectId} filters={filters} onChange={setFilters} />
 
       {/* Kanban Board */}
       <DndContext
@@ -139,20 +165,21 @@ export function KanbanBoardPage() {
         onDragEnd={handleDragEnd}
       >
         <div className="flex gap-4 overflow-x-auto pb-4 flex-1 items-start">
-          {KANBAN_COLUMNS.map((status) => (
+          {states.map((state) => (
             <KanbanColumn
-              key={status}
-              status={status}
-              tasks={tasksByStatus[status]}
+              key={state.id}
+              state={state}
+              tasks={tasksByState[state.id] ?? []}
               orgId={orgId}
               projectId={projectId}
+              projectIdentifier={project?.identifier}
               isLoading={isLoading}
             />
           ))}
         </div>
 
         <DragOverlay>
-          {activeTask && <TaskCard task={activeTask} orgId={orgId} />}
+          {activeTask && <TaskCard task={activeTask} orgId={orgId} projectIdentifier={project?.identifier} />}
         </DragOverlay>
       </DndContext>
 

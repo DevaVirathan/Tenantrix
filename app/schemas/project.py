@@ -17,6 +17,7 @@ from app.models.project import ProjectStatus
 class ProjectCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: str | None = Field(None, max_length=2000)
+    identifier: str | None = Field(None, min_length=1, max_length=5, pattern=r"^[A-Za-z0-9]+$")
     status: ProjectStatus = ProjectStatus.ACTIVE
 
 
@@ -36,6 +37,8 @@ class ProjectOut(BaseModel):
     organization_id: uuid.UUID
     name: str
     description: str | None
+    identifier: str | None = None
+    issue_sequence: int = 0
     status: ProjectStatus
     created_at: datetime
     updated_at: datetime

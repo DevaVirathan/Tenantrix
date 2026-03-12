@@ -77,6 +77,14 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:5173"
 
     # ------------------------------------------------------------------ #
+    # S3 / MinIO (object storage for attachments)                          #
+    # ------------------------------------------------------------------ #
+    S3_ENDPOINT: str = "http://localhost:9000"
+    S3_ACCESS_KEY: str = "minioadmin"
+    S3_SECRET_KEY: str = "minioadmin"
+    S3_BUCKET: str = "tenantrix-attachments"
+
+    # ------------------------------------------------------------------ #
     # CORS                                                                 #
     # ------------------------------------------------------------------ #
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://localhost:5174,http://localhost:5175"

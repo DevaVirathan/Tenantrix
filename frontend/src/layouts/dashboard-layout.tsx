@@ -3,9 +3,13 @@ import { AuthGuard } from "@/components/shared/auth-guard"
 import { TopBar } from "@/components/layout/top-bar"
 import { Sidebar } from "@/components/layout/sidebar"
 import { CommandPalette } from "@/components/layout/command-palette"
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
+import { useWebSocket } from "@/hooks/use-websocket"
 
 export function DashboardLayout() {
   const { orgId } = useParams<{ orgId?: string }>()
+  useKeyboardShortcuts()
+  useWebSocket(orgId)
 
   return (
     <AuthGuard>

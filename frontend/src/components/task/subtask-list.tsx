@@ -42,7 +42,7 @@ export function SubtaskList({ orgId, projectId, parentTaskId, subtasks, canEdit 
     )
   }
 
-  const doneCount = subtasks.filter((s) => s.status === "done").length
+  const doneCount = subtasks.filter((s) => s.status === "done" || s.state?.group === "completed").length
 
   return (
     <div className="space-y-2">
@@ -81,13 +81,13 @@ export function SubtaskList({ orgId, projectId, parentTaskId, subtasks, canEdit 
             className="flex items-center gap-2 w-full rounded px-1.5 py-1 text-xs hover:bg-accent transition-colors text-left"
             onClick={() => openTaskPanel(sub.id)}
           >
-            {sub.status === "done" ? (
+            {(sub.state?.group === "completed" || sub.status === "done") ? (
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
             ) : (
               <Circle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             )}
             <IssueTypeIcon type={sub.issue_type} className="h-3 w-3" />
-            <span className={cn("truncate", sub.status === "done" && "line-through text-muted-foreground")}>
+            <span className={cn("truncate", (sub.state?.group === "completed" || sub.status === "done") && "line-through text-muted-foreground")}>
               {sub.title}
             </span>
           </button>

@@ -6,28 +6,38 @@ import uuid
 from datetime import UTC, datetime  # noqa: TC003
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import OrgAdmin, OrgMember
+from app.api.deps_idempotency import IdempotencyResult, check_idempotency
 from app.db.session import get_db
 from app.models.label import Label
 from app.models.membership import Membership
+from app.models.module import Module
 from app.models.project import Project
+from app.models.project_state import ProjectState
+from app.models.sprint import Sprint
 from app.models.task import IssueType, Task, TaskPriority, TaskStatus
 from app.models.task_label import TaskLabel
 from app.models.task_link import TaskLink
+from app.models.user import User
 from app.schemas.task import (
+    BulkUpdateRequest,
+    BulkUpdateResponse,
     LabelCreateRequest,
     LabelOut,
     TaskCreateRequest,
     TaskLinkCreateRequest,
     TaskLinkOut,
     TaskOut,
+    TaskStateOut,
     TaskSummary,
     TaskUpdateRequest,
 )
 from app.services.audit import write_audit
+from app.services.notification import create_notification
+from app.services.ws_manager import ws_manager
 
 router = APIRouter(prefix="/organizations/{org_id}", tags=["tasks"])
 
@@ -51,10 +61,11 @@ def _load_task(db: Session, org_id: uuid.UUID, task_id: uuid.UUID) -> Task:
         .where(Task.id == task_id, Task.organization_id == org_id, Task.deleted_at.is_(None))
         .options(
             selectinload(Task.task_labels).selectinload(TaskLabel.label),
-            selectinload(Task.subtasks),
-            selectinload(Task.parent),
-            selectinload(Task.outbound_links).selectinload(TaskLink.target_task),
-            selectinload(Task.inbound_links).selectinload(TaskLink.source_task),
+            selectinload(Task.subtasks).selectinload(Task.state),
+            selectinload(Task.parent).selectinload(Task.state),
+            selectinload(Task.state),
+            selectinload(Task.outbound_links).selectinload(TaskLink.target_task).selectinload(Task.state),
+            selectinload(Task.inbound_links).selectinload(TaskLink.source_task).selectinload(Task.state),
         )
     ).first()
 
@@ -97,6 +108,11 @@ def _task_to_out(task: Task) -> TaskOut:
             created_at=lnk.created_at,
         ))
 
+    # State info
+    state_out = None
+    if task.state is not None:
+        state_out = TaskStateOut.model_validate(task.state)
+
     return TaskOut(
         id=task.id,
         organization_id=task.organization_id,
@@ -106,8 +122,11 @@ def _task_to_out(task: Task) -> TaskOut:
         parent_task_id=task.parent_task_id,
         sprint_id=task.sprint_id,
         module_id=task.module_id,
+        state_id=task.state_id,
+        sequence_id=task.sequence_id,
         title=task.title,
         description=task.description,
+        state=state_out,
         status=task.status,
         priority=task.priority,
         issue_type=task.issue_type,
@@ -140,10 +159,14 @@ def create_task(
     org_member: OrgMember,
     project_id: uuid.UUID = Path(...),  # noqa: B008
     db: Session = Depends(get_db),  # noqa: B008
+    idempotency: IdempotencyResult = Depends(check_idempotency),  # noqa: B008
 ) -> TaskOut:
     """Create a new task in the project (MEMBER+ required)."""
+    if idempotency.is_replay:
+        return idempotency.cached_body  # type: ignore[return-value]
+
     org, _membership = org_member
-    _get_project_or_404(db, org.id, project_id)
+    project = _get_project_or_404(db, org.id, project_id)
 
     # Validate assignee is a member of this org (if provided)
     if body.assignee_user_id is not None:
@@ -173,11 +196,30 @@ def create_task(
     if body.parent_task_id is not None and issue_type == IssueType.TASK:
         issue_type = IssueType.SUBTASK
 
+    # Resolve state_id: use provided state_id, or fall back to project's default state
+    state_id = body.state_id
+    if state_id is None:
+        default_state = db.scalars(
+            select(ProjectState)
+            .where(ProjectState.project_id == project_id, ProjectState.is_default.is_(True))
+        ).first()
+        if default_state:
+            state_id = default_state.id
+
+    # Atomic sequence_id increment — SELECT ... FOR UPDATE prevents race conditions
+    locked_project = db.scalars(
+        select(Project).where(Project.id == project_id).with_for_update()
+    ).one()
+    locked_project.issue_sequence += 1
+    sequence_id = locked_project.issue_sequence
+
     task = Task(
         organization_id=org.id,
         project_id=project_id,
         title=body.title,
         description=body.description,
+        state_id=state_id,
+        sequence_id=sequence_id,
         status=body.status,
         priority=body.priority,
         issue_type=issue_type,
@@ -200,11 +242,17 @@ def create_task(
         action="task.created",
         resource_type="task",
         resource_id=str(task.id),
-        metadata={"title": task.title, "project_id": str(project_id)},
+        metadata={"title": task.title, "project_id": str(project_id), "sequence_id": sequence_id},
     )
     db.commit()
     db.expire_all()
-    return _task_to_out(_get_task_or_404(db, org.id, task.id))
+    result = _task_to_out(_get_task_or_404(db, org.id, task.id))
+    idempotency.store(201, result.model_dump(mode="json"))
+    db.commit()
+    ws_manager.broadcast_to_org_nowait(
+        str(org.id), "task_created", result.model_dump(mode="json")
+    )
+    return result
 
 
 # --------------------------------------------------------------------------- #
@@ -218,6 +266,7 @@ def list_tasks(
     project_id: uuid.UUID = Path(...),  # noqa: B008
     db: Session = Depends(get_db),  # noqa: B008
     task_status: TaskStatus | None = Query(None, alias="status"),  # noqa: B008
+    state_id: uuid.UUID | None = Query(None),  # noqa: B008
     priority: TaskPriority | None = Query(None),  # noqa: B008
     assignee_user_id: uuid.UUID | None = Query(None),  # noqa: B008
     issue_type: IssueType | None = Query(None),  # noqa: B008
@@ -225,6 +274,8 @@ def list_tasks(
     no_sprint: bool = Query(False),  # noqa: B008
     due_date_from: datetime | None = Query(None),  # noqa: B008
     due_date_to: datetime | None = Query(None),  # noqa: B008
+    limit: int = Query(500, ge=1, le=1000),  # noqa: B008
+    offset: int = Query(0, ge=0),  # noqa: B008
 ) -> list[TaskOut]:
     """List all active tasks in the project with optional filters (MEMBER+ required)."""
     org, _membership = org_member
@@ -233,9 +284,18 @@ def list_tasks(
     q = (
         select(Task)
         .where(Task.project_id == project_id, Task.organization_id == org.id, Task.deleted_at.is_(None))
-        .options(selectinload(Task.task_labels).selectinload(TaskLabel.label))
+        .options(
+            selectinload(Task.task_labels).selectinload(TaskLabel.label),
+            selectinload(Task.subtasks).selectinload(Task.state),
+            selectinload(Task.parent).selectinload(Task.state),
+            selectinload(Task.state),
+            selectinload(Task.outbound_links).selectinload(TaskLink.target_task).selectinload(Task.state),
+            selectinload(Task.inbound_links).selectinload(TaskLink.source_task).selectinload(Task.state),
+        )
         .order_by(Task.position, Task.created_at)
     )
+    if state_id is not None:
+        q = q.where(Task.state_id == state_id)
     if task_status is not None:
         q = q.where(Task.status == task_status)
     if priority is not None:
@@ -253,6 +313,7 @@ def list_tasks(
     if due_date_to is not None:
         q = q.where(Task.due_date <= due_date_to)
 
+    q = q.limit(limit).offset(offset)
     return [_task_to_out(t) for t in db.scalars(q).all()]
 
 
@@ -292,6 +353,8 @@ def update_task(
         task.title = body.title
     if body.description is not None:
         task.description = body.description
+    if "state_id" in body.model_fields_set:
+        task.state_id = body.state_id
     if body.status is not None:
         task.status = body.status
     if body.priority is not None:
@@ -342,7 +405,8 @@ def update_task(
 
     # Write per-field audit logs for each changed field
     _FIELD_LABELS = {
-        "title": "title", "description": "description", "status": "state",
+        "title": "title", "description": "description",
+        "state_id": "state", "status": "state",
         "priority": "priority", "issue_type": "type", "position": "position",
         "story_points": "estimate point", "start_date": "start date",
         "due_date": "due date", "sprint_id": "cycle", "module_id": "module",
@@ -352,9 +416,24 @@ def update_task(
         new_value = getattr(body, field_name)
         field_label = _FIELD_LABELS.get(field_name, field_name)
 
-        # Format display value
+        # Resolve UUIDs to human-readable names
         if new_value is None:
             display_value = "none"
+        elif field_name == "assignee_user_id":
+            assignee_user = db.get(User, new_value)
+            display_value = (assignee_user.full_name or assignee_user.email) if assignee_user else str(new_value)
+        elif field_name == "state_id":
+            state_obj = db.get(ProjectState, new_value)
+            display_value = state_obj.name if state_obj else str(new_value)
+        elif field_name == "sprint_id":
+            sprint_obj = db.get(Sprint, new_value)
+            display_value = sprint_obj.name if sprint_obj else str(new_value)
+        elif field_name == "module_id":
+            module_obj = db.get(Module, new_value)
+            display_value = module_obj.name if module_obj else str(new_value)
+        elif field_name == "parent_task_id":
+            parent_task = _load_task(db, org.id, new_value) if new_value else None
+            display_value = parent_task.title if parent_task else str(new_value)
         elif isinstance(new_value, datetime):
             display_value = new_value.strftime("%b %d, %Y")
         elif hasattr(new_value, "value"):
@@ -366,15 +445,50 @@ def update_task(
             db,
             organization_id=org.id,
             actor_user_id=_membership.user_id,
-            action=f"task.field_updated",
+            action="task.field_updated",
             resource_type="task",
             resource_id=str(task_id),
             metadata={"field": field_label, "new_value": display_value},
         )
 
+    # Generate notifications for key changes
+    actor_name = _membership.user.full_name or _membership.user.email if hasattr(_membership, "user") else "Someone"
+    actor_user = db.get(User, _membership.user_id)
+    if actor_user:
+        actor_name = actor_user.full_name or actor_user.email
+
+    if "assignee_user_id" in body.model_fields_set and body.assignee_user_id is not None:
+        create_notification(
+            db,
+            recipient_user_id=body.assignee_user_id,
+            actor_user_id=_membership.user_id,
+            organization_id=org.id,
+            action_type="task.assigned",
+            resource_type="task",
+            resource_id=str(task_id),
+            message=f"{actor_name} assigned you to \"{task.title}\"",
+        )
+    if "state_id" in body.model_fields_set and task.assignee_user_id:
+        state_obj = db.get(ProjectState, body.state_id) if body.state_id else None
+        state_name = state_obj.name if state_obj else "unknown"
+        create_notification(
+            db,
+            recipient_user_id=task.assignee_user_id,
+            actor_user_id=_membership.user_id,
+            organization_id=org.id,
+            action_type="task.state_changed",
+            resource_type="task",
+            resource_id=str(task_id),
+            message=f"{actor_name} changed \"{task.title}\" to {state_name}",
+        )
+
     db.commit()
     db.expire_all()
-    return _task_to_out(_get_task_or_404(db, org.id, task.id))
+    result = _task_to_out(_get_task_or_404(db, org.id, task.id))
+    ws_manager.broadcast_to_org_nowait(
+        str(org.id), "task_updated", result.model_dump(mode="json")
+    )
+    return result
 
 
 # --------------------------------------------------------------------------- #
@@ -401,6 +515,9 @@ def delete_task(
         resource_id=str(task_id),
     )
     db.commit()
+    ws_manager.broadcast_to_org_nowait(
+        str(org.id), "task_deleted", {"task_id": str(task_id)}
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -608,3 +725,93 @@ def delete_task_link(
     )
     db.delete(task_link)
     db.commit()
+
+
+# --------------------------------------------------------------------------- #
+# POST /…/projects/{project_id}/tasks/bulk-update — bulk update               #
+# --------------------------------------------------------------------------- #
+
+
+@router.post(
+    "/projects/{project_id}/tasks/bulk-update",
+    response_model=BulkUpdateResponse,
+)
+def bulk_update_tasks(
+    body: BulkUpdateRequest,
+    org_member: OrgMember,
+    project_id: uuid.UUID = Path(...),  # noqa: B008
+    db: Session = Depends(get_db),  # noqa: B008
+) -> BulkUpdateResponse:
+    """Bulk-update multiple tasks in a project (MEMBER+ required)."""
+    org, _membership = org_member
+    _get_project_or_404(db, org.id, project_id)
+
+    # Validate all task_ids belong to this project and org
+    tasks = db.scalars(
+        select(Task).where(
+            Task.id.in_(body.task_ids),
+            Task.project_id == project_id,
+            Task.organization_id == org.id,
+            Task.deleted_at.is_(None),
+        )
+    ).all()
+
+    found_ids = {t.id for t in tasks}
+    missing = [str(tid) for tid in body.task_ids if tid not in found_ids]
+    if missing:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Tasks not found in this project: {', '.join(missing)}",
+        )
+
+    # Build the SET clause from non-None update fields
+    updates = body.updates
+    set_values: dict = {}
+    if updates.state_id is not None:
+        set_values["state_id"] = updates.state_id
+    if updates.priority is not None:
+        set_values["priority"] = updates.priority
+    if updates.assignee_user_id is not None:
+        # Validate assignee membership
+        mem = db.scalars(
+            select(Membership).where(
+                Membership.organization_id == org.id,
+                Membership.user_id == updates.assignee_user_id,
+                Membership.status == "active",
+            )
+        ).first()
+        if mem is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Assignee is not an active member of this organisation.",
+            )
+        set_values["assignee_user_id"] = updates.assignee_user_id
+    if updates.sprint_id is not None:
+        set_values["sprint_id"] = updates.sprint_id
+
+    if not set_values:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="No update fields provided.",
+        )
+
+    result = db.execute(
+        update(Task)
+        .where(Task.id.in_(body.task_ids))
+        .values(**set_values)
+    )
+
+    write_audit(
+        db,
+        organization_id=org.id,
+        actor_user_id=_membership.user_id,
+        action="task.bulk_updated",
+        resource_type="task",
+        resource_id="bulk",
+        metadata={
+            "task_ids": [str(tid) for tid in body.task_ids],
+            "fields": list(set_values.keys()),
+        },
+    )
+    db.commit()
+    return BulkUpdateResponse(updated_count=result.rowcount)

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { useParams } from "react-router-dom"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -16,8 +16,24 @@ import { useTasks, useUpdateTask } from "@/hooks/use-tasks"
 import { useSprints } from "@/hooks/use-sprints"
 import { useAppStore } from "@/store/app-store"
 import type { Task } from "@/types/task"
-import type { Sprint } from "@/types/sprint"
 import { TASK_STATUS_LABELS } from "@/types/task"
+import { cn } from "@/lib/utils"
+
+function StateChip({ task }: { task: Task }) {
+  if (task.state) {
+    return (
+      <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: task.state.color }} />
+        {task.state.name}
+      </span>
+    )
+  }
+  return (
+    <Badge variant="outline" className="text-xs shrink-0">
+      {TASK_STATUS_LABELS[task.status]}
+    </Badge>
+  )
+}
 
 export function BacklogPage() {
   const { orgId = "", projectId = "" } = useParams<{ orgId: string; projectId: string }>()
@@ -32,6 +48,14 @@ export function BacklogPage() {
 
   const [expandedSprints, setExpandedSprints] = useState<Set<string>>(new Set())
   const [assignToSprint, setAssignToSprint] = useState<string>("")
+  const [backlogDragOver, setBacklogDragOver] = useState(false)
+
+  const handleBacklogDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setBacklogDragOver(false)
+    const taskId = e.dataTransfer.getData("text/task-id")
+    if (taskId) updateTask({ taskId, data: { sprint_id: null } })
+  }, [updateTask])
 
   // Group tasks by sprint
   const { sprintTasks, backlogTasks } = useMemo(() => {
@@ -123,7 +147,12 @@ export function BacklogPage() {
       </div>
 
       {/* Backlog */}
-      <div className="rounded-lg border bg-card">
+      <div
+        className={cn("rounded-lg border bg-card transition-colors", backlogDragOver && "ring-2 ring-primary/40")}
+        onDragOver={(e) => { e.preventDefault(); setBacklogDragOver(true) }}
+        onDragLeave={() => setBacklogDragOver(false)}
+        onDrop={handleBacklogDrop}
+      >
         <div className="flex items-center gap-2 px-4 py-3">
           <h3 className="font-medium text-sm flex-1">
             Backlog
@@ -157,14 +186,14 @@ export function BacklogPage() {
           {backlogTasks.map((task) => (
             <div
               key={task.id}
-              className="flex items-center gap-3 px-4 py-2 hover:bg-accent/50 cursor-pointer text-sm"
+              draggable
+              onDragStart={(e) => { e.dataTransfer.setData("text/task-id", task.id); e.dataTransfer.effectAllowed = "move" }}
+              className="flex items-center gap-3 px-4 py-2 hover:bg-accent/50 cursor-grab active:cursor-grabbing text-sm"
               onClick={() => openTaskPanel(task.id)}
             >
               <IssueTypeIcon type={task.issue_type} className="h-4 w-4 shrink-0" />
               <span className="flex-1 truncate">{task.title}</span>
-              <Badge variant="outline" className="text-xs">
-                {TASK_STATUS_LABELS[task.status]}
-              </Badge>
+              <StateChip task={task} />
               {task.story_points != null && (
                 <span className="text-xs text-muted-foreground">{task.story_points} pts</span>
               )}

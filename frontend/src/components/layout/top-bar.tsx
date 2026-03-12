@@ -3,6 +3,7 @@ import { Link, useParams, useMatches } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { NotificationBell } from "@/components/layout/notification-bell"
 import { UserMenu } from "@/components/layout/user-menu"
+import { MobileSidebar } from "@/components/layout/sidebar"
 import { useTheme } from "@/providers/theme-provider"
 import { useAppStore } from "@/store/app-store"
 import { useProject } from "@/hooks/use-projects"
@@ -74,6 +75,9 @@ export function TopBar() {
 
   return (
     <header className="h-12 border-b border-border bg-background/95 backdrop-blur-sm flex items-center px-4 gap-3 sticky top-0 z-40">
+      {/* Mobile hamburger */}
+      <MobileSidebar />
+
       {/* App name */}
       <Link to="/orgs" className="font-semibold text-sm text-foreground shrink-0">
         Tenantrix

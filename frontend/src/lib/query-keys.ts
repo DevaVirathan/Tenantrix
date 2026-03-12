@@ -19,6 +19,10 @@ export const queryKeys = {
     ["org", orgId, "project", projectId, "sprints", filters] as const,
   sprint: (orgId: string, sprintId: string) =>
     ["org", orgId, "sprint", sprintId] as const,
+  projectStates: (orgId: string, projectId: string) =>
+    ["org", orgId, "project", projectId, "states"] as const,
+  watchers: (orgId: string, taskId: string) =>
+    ["org", orgId, "task", taskId, "watchers"] as const,
   auditLogs: (orgId: string, filters?: Record<string, unknown>) =>
     ["org", orgId, "audit-logs", filters] as const,
 }

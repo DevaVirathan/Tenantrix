@@ -86,7 +86,7 @@ export function TaskRelations({ orgId, projectId, taskId, links, canEdit }: Task
                 onClick={() => openTaskPanel(otherTask.id)}
               >
                 <IssueTypeIcon type={otherTask.issue_type} className="h-3 w-3" />
-                <span className={cn(otherTask.status === "done" && "line-through text-muted-foreground")}>
+                <span className={cn((otherTask.state?.group === "completed" || otherTask.status === "done") && "line-through text-muted-foreground")}>
                   {otherTask.title}
                 </span>
               </button>

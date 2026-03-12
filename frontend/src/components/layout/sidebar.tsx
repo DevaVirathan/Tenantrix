@@ -3,7 +3,7 @@ import { NavLink, useParams, useLocation } from "react-router-dom"
 import {
   LayoutDashboard, Users, Mail, Settings, Activity,
   FolderKanban, ChevronDown, ChevronRight, LayoutGrid, ListTodo,
-  List, Calendar, GanttChart, BarChart3,
+  List, Calendar, GanttChart, BarChart3, Menu,
 } from "lucide-react"
 import { OrgSwitcher } from "./org-switcher"
 import { useAppStore } from "@/store/app-store"
@@ -11,6 +11,8 @@ import { useProjects } from "@/hooks/use-projects"
 import { hasRole } from "@/lib/rbac"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Button } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
 interface NavItem {
   label: string
@@ -19,7 +21,9 @@ interface NavItem {
   adminOnly?: boolean
 }
 
-export function Sidebar() {
+// ── Shared nav content ────────────────────────────────────────────────────────
+
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { orgId } = useParams<{ orgId: string }>()
   const location = useLocation()
   const activeMembership = useAppStore((s) => s.activeMembership)
@@ -27,20 +31,14 @@ export function Sidebar() {
 
   const { data: projects = [] } = useProjects(orgId ?? "")
 
-  // Track which projects are expanded in the sidebar
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set())
-
-  // Auto-expand the active project
   const activeProjectId = useParams<{ projectId?: string }>().projectId
 
   function toggleProject(projectId: string) {
     setExpandedProjects((prev) => {
       const next = new Set(prev)
-      if (next.has(projectId)) {
-        next.delete(projectId)
-      } else {
-        next.add(projectId)
-      }
+      if (next.has(projectId)) next.delete(projectId)
+      else next.add(projectId)
       return next
     })
   }
@@ -64,14 +62,38 @@ export function Sidebar() {
   const canCreateProject = hasRole(role, "member")
   const isProjectsActive = location.pathname.includes("/projects")
 
+  const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+    cn(
+      "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+      isActive
+        ? "bg-accent text-accent-foreground"
+        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+    )
+
+  const subNavClass = ({ isActive }: { isActive: boolean }) =>
+    cn(
+      "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+      isActive
+        ? "bg-accent text-accent-foreground font-medium"
+        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+    )
+
+  const projectViews: { to: string; icon: React.ComponentType<{ className?: string }>; label: string }[] = [
+    { to: "board", icon: LayoutDashboard, label: "Board" },
+    { to: "backlog", icon: ListTodo, label: "Backlog" },
+    { to: "list", icon: List, label: "List" },
+    { to: "calendar", icon: Calendar, label: "Calendar" },
+    { to: "timeline", icon: GanttChart, label: "Timeline" },
+    { to: "modules", icon: FolderKanban, label: "Modules" },
+    { to: "analytics", icon: BarChart3, label: "Analytics" },
+  ]
+
   return (
-    <aside className="flex h-full w-56 shrink-0 flex-col border-r bg-sidebar">
-      {/* Org switcher */}
+    <>
       <div className="border-b px-3 py-3">
         <OrgSwitcher />
       </div>
 
-      {/* Nav */}
       <ScrollArea className="flex-1 px-2 py-3">
         <nav className="flex flex-col gap-0.5">
           {visibleTopItems.map((item) => (
@@ -79,14 +101,8 @@ export function Sidebar() {
               key={item.to}
               to={item.to}
               end={item.to === `/orgs/${orgId}`}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                )
-              }
+              className={navLinkClass}
+              onClick={onNavigate}
             >
               <item.icon className="h-4 w-4 shrink-0" />
               {item.label}
@@ -104,6 +120,7 @@ export function Sidebar() {
                     ? "text-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 )}
+                onClick={onNavigate}
               >
                 <LayoutGrid className="h-3.5 w-3.5" />
                 Projects
@@ -136,102 +153,23 @@ export function Sidebar() {
 
                     {expanded && (
                       <div className="ml-4 flex flex-col gap-0.5 border-l pl-2.5 mt-0.5 mb-1">
-                        <NavLink
-                          to={`/orgs/${orgId}/projects/${project.id}/board`}
-                          className={({ isActive }) =>
-                            cn(
-                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-                              isActive
-                                ? "bg-accent text-accent-foreground font-medium"
-                                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                            )
-                          }
-                        >
-                          <LayoutDashboard className="h-3.5 w-3.5 shrink-0" />
-                          Board
-                        </NavLink>
-                        <NavLink
-                          to={`/orgs/${orgId}/projects/${project.id}/backlog`}
-                          className={({ isActive }) =>
-                            cn(
-                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-                              isActive
-                                ? "bg-accent text-accent-foreground font-medium"
-                                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                            )
-                          }
-                        >
-                          <ListTodo className="h-3.5 w-3.5 shrink-0" />
-                          Backlog
-                        </NavLink>
-                        <NavLink
-                          to={`/orgs/${orgId}/projects/${project.id}/list`}
-                          className={({ isActive }) =>
-                            cn(
-                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-                              isActive
-                                ? "bg-accent text-accent-foreground font-medium"
-                                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                            )
-                          }
-                        >
-                          <List className="h-3.5 w-3.5 shrink-0" />
-                          List
-                        </NavLink>
-                        <NavLink
-                          to={`/orgs/${orgId}/projects/${project.id}/calendar`}
-                          className={({ isActive }) =>
-                            cn(
-                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-                              isActive
-                                ? "bg-accent text-accent-foreground font-medium"
-                                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                            )
-                          }
-                        >
-                          <Calendar className="h-3.5 w-3.5 shrink-0" />
-                          Calendar
-                        </NavLink>
-                        <NavLink
-                          to={`/orgs/${orgId}/projects/${project.id}/timeline`}
-                          className={({ isActive }) =>
-                            cn(
-                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-                              isActive
-                                ? "bg-accent text-accent-foreground font-medium"
-                                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                            )
-                          }
-                        >
-                          <GanttChart className="h-3.5 w-3.5 shrink-0" />
-                          Timeline
-                        </NavLink>
-                        <NavLink
-                          to={`/orgs/${orgId}/projects/${project.id}/analytics`}
-                          className={({ isActive }) =>
-                            cn(
-                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-                              isActive
-                                ? "bg-accent text-accent-foreground font-medium"
-                                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                            )
-                          }
-                        >
-                          <BarChart3 className="h-3.5 w-3.5 shrink-0" />
-                          Analytics
-                        </NavLink>
+                        {projectViews.map((view) => (
+                          <NavLink
+                            key={view.to}
+                            to={`/orgs/${orgId}/projects/${project.id}/${view.to}`}
+                            className={subNavClass}
+                            onClick={onNavigate}
+                          >
+                            <view.icon className="h-3.5 w-3.5 shrink-0" />
+                            {view.label}
+                          </NavLink>
+                        ))}
                         {hasRole(role, "admin") && (
                           <NavLink
                             to={`/orgs/${orgId}/projects/${project.id}`}
                             end
-                            className={({ isActive }) =>
-                              cn(
-                                "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-                                isActive
-                                  ? "bg-accent text-accent-foreground font-medium"
-                                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                              )
-                            }
+                            className={subNavClass}
+                            onClick={onNavigate}
                           >
                             <Settings className="h-3.5 w-3.5 shrink-0" />
                             Settings
@@ -247,6 +185,7 @@ export function Sidebar() {
                 <NavLink
                   to={`/orgs/${orgId}/projects`}
                   className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground"
+                  onClick={onNavigate}
                 >
                   + New project
                 </NavLink>
@@ -255,6 +194,41 @@ export function Sidebar() {
           </div>
         </nav>
       </ScrollArea>
+    </>
+  )
+}
+
+// ── Desktop sidebar ───────────────────────────────────────────────────────────
+
+export function Sidebar() {
+  return (
+    <aside
+      className="hidden md:flex h-full w-56 shrink-0 flex-col border-r bg-sidebar"
+      role="navigation"
+      aria-label="Main navigation"
+    >
+      <SidebarContent />
     </aside>
+  )
+}
+
+// ── Mobile sidebar (hamburger sheet) ──────────────────────────────────────────
+
+export function MobileSidebar() {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" className="md:hidden h-8 w-8" aria-label="Open menu">
+          <Menu className="h-5 w-5" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="w-64 p-0">
+        <div className="flex h-full flex-col">
+          <SidebarContent onNavigate={() => setOpen(false)} />
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Bell, Check, CheckCheck } from "lucide-react"
+import { Bell, CheckCheck } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,7 +23,7 @@ export function NotificationBell() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 relative">
+        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 relative" aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}>
           <Bell className="h-4 w-4" />
           {unreadCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center px-1">

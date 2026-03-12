@@ -21,6 +21,9 @@ interface AppState {
   taskPanelOpen: boolean
   activeTaskId: string | null
 
+  // Create dialog (triggered by keyboard shortcut "C")
+  createDialogOpen: boolean
+
   // Actions
   setTokens: (accessToken: string, refreshToken: string) => void
   setUser: (user: User) => void
@@ -29,6 +32,7 @@ interface AppState {
   setProjectView: (view: "grid" | "list") => void
   openTaskPanel: (taskId: string) => void
   closeTaskPanel: () => void
+  setCreateDialogOpen: (open: boolean) => void
   logout: () => void
 }
 
@@ -44,6 +48,7 @@ export const useAppStore = create<AppState>()(
       projectView: "grid" as const,
       taskPanelOpen: false,
       activeTaskId: null,
+      createDialogOpen: false,
 
       setTokens: (accessToken, refreshToken) =>
         set({ accessToken, refreshToken }),
@@ -60,6 +65,8 @@ export const useAppStore = create<AppState>()(
       openTaskPanel: (taskId) => set({ taskPanelOpen: true, activeTaskId: taskId }),
 
       closeTaskPanel: () => set({ taskPanelOpen: false, activeTaskId: null }),
+
+      setCreateDialogOpen: (open) => set({ createDialogOpen: open }),
 
       logout: () =>
         set({

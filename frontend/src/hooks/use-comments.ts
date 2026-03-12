@@ -23,7 +23,7 @@ export function useComments(orgId: string, taskId: string) {
         .get(`organizations/${orgId}/tasks/${taskId}/comments`)
         .json<Comment[]>(),
     enabled: !!orgId && !!taskId,
-    staleTime: 1000 * 30,
+    staleTime: 0,
   })
 }
 
@@ -36,6 +36,7 @@ export function useCreateComment(orgId: string, taskId: string) {
         .json<Comment>(),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.comments(orgId, taskId) })
+      qc.invalidateQueries({ queryKey: queryKeys.taskActivity(orgId, taskId) })
     },
     onError: async (err: unknown) => {
       toast.error((await extractDetail(err)) ?? "Failed to add comment")
@@ -52,6 +53,7 @@ export function useUpdateComment(orgId: string, taskId: string) {
         .json<Comment>(),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.comments(orgId, taskId) })
+      qc.invalidateQueries({ queryKey: queryKeys.taskActivity(orgId, taskId) })
     },
     onError: async (err: unknown) => {
       toast.error((await extractDetail(err)) ?? "Failed to update comment")
@@ -68,6 +70,7 @@ export function useDeleteComment(orgId: string, taskId: string) {
         .then(() => undefined),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.comments(orgId, taskId) })
+      qc.invalidateQueries({ queryKey: queryKeys.taskActivity(orgId, taskId) })
     },
     onError: async (err: unknown) => {
       toast.error((await extractDetail(err)) ?? "Failed to delete comment")

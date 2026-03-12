@@ -7,8 +7,6 @@ import { CommentForm } from "./comment-form"
 import { useComments } from "@/hooks/use-comments"
 import { useMembers } from "@/hooks/use-members"
 import { useTaskActivity } from "@/hooks/use-audit-logs"
-import { useAppStore } from "@/store/app-store"
-import { hasRole } from "@/lib/rbac"
 import type { AuditLog } from "@/types/audit"
 import type { Comment } from "@/types/comment"
 import { cn } from "@/lib/utils"
@@ -93,12 +91,9 @@ type ActivityItem =
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function CommentThread({ orgId, taskId }: CommentThreadProps) {
-  const membership = useAppStore((s) => s.activeMembership)
-  const isAdmin = hasRole(membership?.role, "admin")
-
-  const { data: comments = [], isLoading: commentsLoading } = useComments(orgId, taskId)
+  const { data: comments = [], isLoading: commentsLoading, isError: commentsError } = useComments(orgId, taskId)
   const { data: members = [] } = useMembers(orgId)
-  const { data: activityLogs = [], isLoading: logsLoading } = useTaskActivity(orgId, taskId, isAdmin)
+  const { data: activityLogs = [], isLoading: logsLoading, isError: logsError } = useTaskActivity(orgId, taskId)
 
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -123,6 +118,7 @@ export function CommentThread({ orgId, taskId }: CommentThreadProps) {
   ].sort((a, b) => a.ts - b.ts)
 
   const isLoading = commentsLoading || logsLoading
+  const isError = commentsError || logsError
 
   return (
     <div className="flex flex-col gap-4">
@@ -131,7 +127,9 @@ export function CommentThread({ orgId, taskId }: CommentThreadProps) {
       <p className="text-sm font-semibold">Activity</p>
 
       {/* Feed */}
-      {isLoading ? (
+      {isError ? (
+        <p className="text-xs text-destructive py-2">Failed to load activity. Please try again.</p>
+      ) : isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="flex gap-3">

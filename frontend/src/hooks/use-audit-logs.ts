@@ -33,17 +33,17 @@ export function useAuditLogs(orgId: string, filters: Omit<AuditFilters, "limit" 
   })
 }
 
-/** Fetch all audit events for a single task (by resource_id). Admin-only endpoint. */
-export function useTaskActivity(orgId: string, taskId: string, isAdmin: boolean) {
+/** Fetch all audit events for a single task — accessible by any member. */
+export function useTaskActivity(orgId: string, taskId: string) {
   return useQuery({
     queryKey: queryKeys.taskActivity(orgId, taskId),
     queryFn: () =>
       apiClient
-        .get(`organizations/${orgId}/audit-logs`, {
-          searchParams: { resource_id: taskId, limit: "100", offset: "0" },
+        .get(`organizations/${orgId}/tasks/${taskId}/activity`, {
+          searchParams: { limit: "100", offset: "0" },
         })
         .json<AuditLog[]>(),
-    enabled: !!orgId && !!taskId && isAdmin,
-    staleTime: 1000 * 30,
+    enabled: !!orgId && !!taskId,
+    staleTime: 0,
   })
 }

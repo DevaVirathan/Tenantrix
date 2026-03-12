@@ -3,10 +3,12 @@ import { ThemeProvider } from "@/providers/theme-provider"
 import { QueryProvider } from "@/providers/query-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { ErrorBoundary } from "@/components/shared/error-boundary"
 import { router } from "@/router"
 
 export function App() {
   return (
+    <ErrorBoundary>
     <ThemeProvider>
       <QueryProvider>
         <TooltipProvider delayDuration={300}>
@@ -15,5 +17,6 @@ export function App() {
         </TooltipProvider>
       </QueryProvider>
     </ThemeProvider>
+    </ErrorBoundary>
   )
 }

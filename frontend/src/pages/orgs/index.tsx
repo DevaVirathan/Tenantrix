@@ -1,14 +1,31 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Plus, Building2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { OrgCard } from "@/components/org/org-card"
 import { CreateOrgDialog } from "@/components/org/create-org-dialog"
+import { OnboardingWizard } from "@/components/shared/onboarding-wizard"
 import { useOrgs } from "@/hooks/use-orgs"
+import { apiClient } from "@/lib/api-client"
 
 export function OrgsPage() {
-  const { data: orgs, isLoading } = useOrgs()
+  const { data: orgs, isLoading, refetch } = useOrgs()
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
+
+  // Show onboarding for first-time users with no orgs
+  useEffect(() => {
+    if (!isLoading && orgs && orgs.length === 0) {
+      const dismissed = sessionStorage.getItem("onboarding_dismissed")
+      if (!dismissed) setShowOnboarding(true)
+    }
+  }, [isLoading, orgs])
+
+  function dismissOnboarding() {
+    sessionStorage.setItem("onboarding_dismissed", "1")
+    setShowOnboarding(false)
+    refetch()
+  }
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -48,6 +65,22 @@ export function OrgsPage() {
       )}
 
       <CreateOrgDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+
+      <OnboardingWizard
+        open={showOnboarding}
+        onClose={dismissOnboarding}
+        onCreateOrg={async (name, description) => {
+          const res = await apiClient.post("organizations", { json: { name, description } }).json<{ id: string }>()
+          return res.id
+        }}
+        onCreateProject={async (oId, name) => {
+          const res = await apiClient.post(`organizations/${oId}/projects`, { json: { name } }).json<{ id: string }>()
+          return res.id
+        }}
+        onInvite={async (oId, email) => {
+          await apiClient.post(`organizations/${oId}/invites`, { json: { email, role: "member" } })
+        }}
+      />
     </div>
   )
 }

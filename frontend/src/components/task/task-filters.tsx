@@ -8,37 +8,48 @@ import {
 import { Button } from "@/components/ui/button"
 import { PriorityIcon } from "./priority-icon"
 import { IssueTypeIcon } from "./issue-type-icon"
-import type { TaskFilters, TaskStatus, TaskPriority, IssueType } from "@/types/task"
-import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS, ISSUE_TYPE_LABELS } from "@/types/task"
+import type { TaskFilters, TaskPriority, IssueType } from "@/types/task"
+import { TASK_PRIORITY_LABELS, ISSUE_TYPE_LABELS } from "@/types/task"
 import { useMembers } from "@/hooks/use-members"
+import { useProjectStates } from "@/hooks/use-project-states"
 
 interface TaskFiltersBarProps {
   orgId: string
+  projectId: string
   filters: TaskFilters
   onChange: (filters: TaskFilters) => void
 }
 
 const ALL = "__all__"
 
-export function TaskFiltersBar({ orgId, filters, onChange }: TaskFiltersBarProps) {
+export function TaskFiltersBar({ orgId, projectId, filters, onChange }: TaskFiltersBarProps) {
   const { data: members = [] } = useMembers(orgId)
+  const { data: states = [] } = useProjectStates(orgId, projectId)
 
-  const hasFilters = !!(filters.status || filters.priority || filters.assignee_user_id || filters.issue_type)
+  const hasFilters = !!(filters.state_id || filters.priority || filters.assignee_user_id || filters.issue_type)
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      {/* Status */}
+      {/* State */}
       <Select
-        value={filters.status ?? ALL}
-        onValueChange={(v) => onChange({ ...filters, status: v === ALL ? undefined : v as TaskStatus })}
+        value={filters.state_id ?? ALL}
+        onValueChange={(v) => onChange({ ...filters, state_id: v === ALL ? undefined : v })}
       >
         <SelectTrigger className="h-8 w-36 text-xs">
-          <SelectValue placeholder="Status" />
+          <SelectValue placeholder="State" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ALL}>All statuses</SelectItem>
-          {(Object.entries(TASK_STATUS_LABELS) as [TaskStatus, string][]).map(([v, label]) => (
-            <SelectItem key={v} value={v}>{label}</SelectItem>
+          <SelectItem value={ALL}>All states</SelectItem>
+          {states.map((s) => (
+            <SelectItem key={s.id} value={s.id}>
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="inline-block h-2 w-2 rounded-full shrink-0"
+                  style={{ backgroundColor: s.color }}
+                />
+                {s.name}
+              </span>
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>

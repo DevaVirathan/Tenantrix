@@ -1,5 +1,6 @@
 """ORM models — import all here so Alembic can discover every table."""
 
+from app.models.attachment import Attachment
 from app.models.audit_log import AuditLog
 from app.models.comment import Comment
 from app.models.idempotency_key import IdempotencyKey
@@ -14,6 +15,7 @@ from app.models.task_label import TaskLabel
 from app.models.user import User
 
 __all__ = [
+    "Attachment",
     "AuditLog",
     "Comment",
     "IdempotencyKey",

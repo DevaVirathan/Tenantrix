@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { apiClient } from "@/lib/api-client"
-import { queryKeys } from "@/lib/query-keys"
 import type { Module } from "@/types/module"
 
 async function extractDetail(err: unknown): Promise<string | null> {

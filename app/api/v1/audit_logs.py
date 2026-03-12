@@ -5,11 +5,11 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import OrgAdmin
+from app.api.deps import OrgAdmin, OrgMember
 from app.db.session import get_db
 from app.models.audit_log import AuditLog
 from app.schemas.audit_log import AuditLogOut
@@ -61,6 +61,38 @@ def list_audit_logs(
         q = q.where(AuditLog.created_at <= until)
 
     q = q.offset(offset).limit(limit)
+
+    rows = db.scalars(q).all()
+    return [AuditLogOut.from_orm(r) for r in rows]
+
+
+# --------------------------------------------------------------------------- #
+# GET /organizations/{org_id}/tasks/{task_id}/activity                         #
+# --------------------------------------------------------------------------- #
+
+
+@router.get("/tasks/{task_id}/activity", response_model=list[AuditLogOut])
+def list_task_activity(
+    org_member: OrgMember,
+    task_id: uuid.UUID = Path(...),  # noqa: B008
+    db: Session = Depends(get_db),  # noqa: B008
+    limit: int = Query(100, ge=1, le=_MAX_PAGE_SIZE),
+    offset: int = Query(0, ge=0),
+) -> list[AuditLogOut]:
+    """Return audit events for a specific task — any member can view."""
+    org, _membership = org_member
+
+    q = (
+        select(AuditLog)
+        .where(
+            AuditLog.organization_id == org.id,
+            AuditLog.resource_type == "task",
+            AuditLog.resource_id == str(task_id),
+        )
+        .order_by(AuditLog.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
 
     rows = db.scalars(q).all()
     return [AuditLogOut.from_orm(r) for r in rows]

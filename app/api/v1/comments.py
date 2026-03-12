@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -14,7 +14,9 @@ from app.db.session import get_db
 from app.models.comment import Comment
 from app.models.task import Task
 from app.schemas.comment import CommentCreateRequest, CommentOut, CommentUpdateRequest
+from app.models.user import User
 from app.services.audit import write_audit
+from app.services.notification import create_notification
 
 router = APIRouter(prefix="/organizations/{org_id}", tags=["comments"])
 
@@ -87,6 +89,27 @@ def create_comment(
         resource_id=str(comment.id),
         metadata={"task_id": str(task_id)},
     )
+    # Notify task assignee and creator about new comment
+    actor_user = db.get(User, membership.user_id)
+    actor_name = (actor_user.full_name or actor_user.email) if actor_user else "Someone"
+    task = _get_task_or_404(db, org.id, task_id)
+    recipients: set[uuid.UUID] = set()
+    if task.assignee_user_id:
+        recipients.add(task.assignee_user_id)
+    if task.created_by_user_id:
+        recipients.add(task.created_by_user_id)
+    for recipient_id in recipients:
+        create_notification(
+            db,
+            recipient_user_id=recipient_id,
+            actor_user_id=membership.user_id,
+            organization_id=org.id,
+            action_type="comment.created",
+            resource_type="task",
+            resource_id=str(task_id),
+            message=f"{actor_name} commented on \"{task.title}\"",
+        )
+
     db.commit()
     db.refresh(comment)
     return CommentOut.model_validate(comment)
@@ -102,6 +125,8 @@ def list_comments(
     org_member: OrgMember,
     task_id: uuid.UUID = Path(...),  # noqa: B008
     db: Session = Depends(get_db),  # noqa: B008
+    limit: int = Query(100, ge=1, le=500),  # noqa: B008
+    offset: int = Query(0, ge=0),  # noqa: B008
 ) -> list[CommentOut]:
     """List all active comments on a task, oldest first (MEMBER+ required)."""
     org, _membership = org_member
@@ -115,6 +140,8 @@ def list_comments(
             Comment.deleted_at.is_(None),
         )
         .order_by(Comment.created_at)
+        .limit(limit)
+        .offset(offset)
     ).all()
     return [CommentOut.model_validate(c) for c in comments]
 

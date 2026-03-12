@@ -11,8 +11,9 @@ from sqlalchemy.orm import Session
 from app.api.deps import OrgAdmin, OrgMember
 from app.db.session import get_db
 from app.models.project import Project
+from app.models.project_state import ProjectState, StateGroup
 from app.models.sprint import Sprint, SprintStatus
-from app.models.task import Task, TaskStatus
+from app.models.task import Task
 from app.schemas.sprint import SprintCreateRequest, SprintOut, SprintUpdateRequest
 from app.services.audit import write_audit
 
@@ -36,10 +37,19 @@ def _sprint_to_out(db: Session, sprint: Sprint) -> SprintOut:
     row = db.execute(
         select(
             func.count(Task.id).label("task_count"),
-            func.count(Task.id).filter(Task.status == TaskStatus.DONE).label("done_count"),
             func.coalesce(func.sum(Task.story_points), 0).label("total_points"),
         ).where(Task.sprint_id == sprint.id, Task.deleted_at.is_(None))
     ).one()
+
+    done_count = db.scalar(
+        select(func.count(Task.id))
+        .join(ProjectState, ProjectState.id == Task.state_id)
+        .where(
+            Task.sprint_id == sprint.id,
+            Task.deleted_at.is_(None),
+            ProjectState.group == StateGroup.COMPLETED,
+        )
+    ) or 0
 
     return SprintOut(
         id=sprint.id,
@@ -52,7 +62,7 @@ def _sprint_to_out(db: Session, sprint: Sprint) -> SprintOut:
         end_date=sprint.end_date,
         goals=sprint.goals,
         task_count=row.task_count,
-        done_count=row.done_count,
+        done_count=done_count,
         total_points=row.total_points,
         created_at=sprint.created_at,
         updated_at=sprint.updated_at,

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
-  X, Trash2, Paperclip, UserCircle2,
+  X, Trash2, Paperclip, UserCircle2, Eye, EyeOff,
   AlertCircle, ArrowDown, ArrowRight, ArrowUp, CalendarDays,
   Hexagon, Layers, Timer, Box,
 } from "lucide-react"
@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor, RichTextViewer } from "@/components/shared/rich-text-editor"
+import { DatePicker } from "@/components/shared/date-picker"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
@@ -20,28 +22,24 @@ import { LabelPicker } from "./label-picker"
 import { SubtaskList } from "./subtask-list"
 import { TaskRelations } from "./task-relations"
 import { useTask, useUpdateTask, useDeleteTask } from "@/hooks/use-tasks"
+import { useProject } from "@/hooks/use-projects"
 import { useSprints } from "@/hooks/use-sprints"
 import { useModules } from "@/hooks/use-modules"
+import { useProjectStates } from "@/hooks/use-project-states"
 import { CommentThread } from "./comment-thread"
+import { AttachmentList } from "./attachment-list"
+import { useWatchers, useToggleWatch } from "@/hooks/use-watchers"
 import { useAppStore } from "@/store/app-store"
 import { useMembers } from "@/hooks/use-members"
 import { hasRole } from "@/lib/rbac"
 import { updateTaskSchema, type UpdateTaskValues } from "@/validations/task.schema"
-import type { TaskStatus, TaskPriority, IssueType } from "@/types/task"
-import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS, ISSUE_TYPE_LABELS } from "@/types/task"
+import type { TaskPriority, IssueType } from "@/types/task"
+import { TASK_PRIORITY_LABELS, ISSUE_TYPE_LABELS } from "@/types/task"
 import { cn } from "@/lib/utils"
 
 interface TaskDetailPanelProps {
   orgId: string
   projectId: string
-}
-
-// ── Status dot colours ────────────────────────────────────────────────────────
-const STATUS_COLOR: Record<TaskStatus, string> = {
-  todo: "bg-gray-400",
-  in_progress: "bg-blue-500",
-  done: "bg-emerald-500",
-  blocked: "bg-red-500",
 }
 
 // ── Priority colours / icons ──────────────────────────────────────────────────
@@ -88,12 +86,17 @@ export function TaskDetailPanel({ orgId, projectId }: TaskDetailPanelProps) {
   const canEdit = hasRole(membership?.role, "member")
   const canDelete = hasRole(membership?.role, "admin")
 
+  const { data: project } = useProject(orgId, projectId)
   const { data: task, isLoading } = useTask(orgId, activeTaskId ?? "")
   const { mutate: updateTask, isPending: isUpdating } = useUpdateTask(orgId, projectId)
   const { mutate: deleteTask, isPending: isDeleting } = useDeleteTask(orgId, projectId)
   const { data: members = [] } = useMembers(orgId)
   const { data: sprints = [] } = useSprints(orgId, projectId)
   const { data: modules = [] } = useModules(orgId, projectId)
+  const { data: projectStates = [] } = useProjectStates(orgId, projectId)
+  const { data: watchers = [] } = useWatchers(orgId, activeTaskId ?? "")
+  const { watch: watchTask, unwatch: unwatchTask } = useToggleWatch(orgId, activeTaskId ?? "")
+  const isWatching = watchers.some((w) => w.user_id === user?.id)
 
   // ── Inline title editing ──────────────────────────────────────────────────
   const [editingTitle, setEditingTitle] = useState(false)
@@ -169,7 +172,6 @@ export function TaskDetailPanel({ orgId, projectId }: TaskDetailPanelProps) {
     ? (createdByMember.full_name ?? createdByMember.email ?? "Unknown")
     : null
 
-  const statuses = Object.entries(TASK_STATUS_LABELS) as [TaskStatus, string][]
   const priorities = Object.keys(TASK_PRIORITY_LABELS) as TaskPriority[]
 
   if (!taskPanelOpen) return null
@@ -180,13 +182,19 @@ export function TaskDetailPanel({ orgId, projectId }: TaskDetailPanelProps) {
       <div
         className="fixed inset-0 z-40 bg-black/20"
         onClick={closeTaskPanel}
+        aria-hidden="true"
       />
 
       {/* Panel */}
-      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-4xl shadow-2xl bg-background border-l animate-in slide-in-from-right duration-200">
+      <div
+        role="dialog"
+        aria-label={task ? `Task: ${task.title}` : "Task details"}
+        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-4xl shadow-2xl bg-background border-l animate-in slide-in-from-right duration-200"
+      >
 
         {/* ── Close button ── */}
         <button
+          aria-label="Close task panel"
           onClick={closeTaskPanel}
           className="absolute top-3 right-3 z-10 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
         >
@@ -206,6 +214,13 @@ export function TaskDetailPanel({ orgId, projectId }: TaskDetailPanelProps) {
                 LEFT — main content (title · description · actions · activity)
             ════════════════════════════════════════════════════════════════ */}
             <div className="flex flex-col flex-1 overflow-y-auto px-8 py-6 gap-5">
+
+              {/* Issue ID */}
+              {project?.identifier && task.sequence_id != null && (
+                <p className="text-xs text-muted-foreground font-medium">
+                  {project.identifier}-{task.sequence_id}
+                </p>
+              )}
 
               {/* Title */}
               {editingTitle ? (
@@ -236,18 +251,22 @@ export function TaskDetailPanel({ orgId, projectId }: TaskDetailPanelProps) {
 
               {/* Description */}
               {editingDesc ? (
-                <Textarea
-                  ref={descRef}
-                  value={descDraft}
-                  onChange={(e) => setDescDraft(e.target.value)}
-                  placeholder="Add a description…"
-                  className="resize-none text-sm min-h-24 text-foreground/80"
-                  onBlur={saveDesc}
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") { setDescDraft(task.description ?? ""); setEditingDesc(false) }
-                  }}
-                  disabled={!canEdit}
-                />
+                <div onBlur={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget)) saveDesc()
+                }}>
+                  <RichTextEditor
+                    content={descDraft}
+                    onChange={setDescDraft}
+                    placeholder="Add a description…"
+                    editable={canEdit}
+                  />
+                  <div className="flex justify-end gap-2 mt-2">
+                    <Button variant="ghost" size="sm" onClick={() => { setDescDraft(task.description ?? ""); setEditingDesc(false) }}>
+                      Cancel
+                    </Button>
+                    <Button size="sm" onClick={saveDesc}>Save</Button>
+                  </div>
+                </div>
               ) : (
                 <div
                   className={cn(
@@ -257,7 +276,7 @@ export function TaskDetailPanel({ orgId, projectId }: TaskDetailPanelProps) {
                   onClick={() => canEdit && setEditingDesc(true)}
                 >
                   {task.description
-                    ? <span className="text-foreground/80 whitespace-pre-wrap">{task.description}</span>
+                    ? <RichTextViewer content={task.description} />
                     : <span className="italic">Add a description…</span>
                   }
                 </div>
@@ -293,13 +312,8 @@ export function TaskDetailPanel({ orgId, projectId }: TaskDetailPanelProps) {
                 canEdit={canEdit}
               />
 
-              {/* Action bar (remaining placeholders) */}
-              <div className="flex items-center gap-1 flex-wrap">
-                <button className="flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
-                  <Paperclip className="h-3.5 w-3.5" />
-                  Attach
-                </button>
-              </div>
+              {/* Attachments */}
+              <AttachmentList orgId={orgId} taskId={task.id} canEdit={canEdit} />
 
               <Separator />
 
@@ -334,23 +348,31 @@ export function TaskDetailPanel({ orgId, projectId }: TaskDetailPanelProps) {
                 Properties
               </p>
 
-              {/* State */}
+              {/* State (dynamic project states) */}
               <PropRow icon={CalendarDays} label="State">
                 <Select
-                  value={task.status}
-                  onValueChange={(v) => handlePropChange({ status: v as TaskStatus })}
+                  value={task.state_id ?? ""}
+                  onValueChange={(v) => handlePropChange({ state_id: v })}
                   disabled={!canEdit || isUpdating}
                 >
                   <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none px-1 hover:bg-accent focus:ring-0 w-full justify-start gap-1.5">
-                    <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", STATUS_COLOR[task.status])} />
+                    {task.state && (
+                      <span
+                        className="inline-block h-2 w-2 rounded-full shrink-0"
+                        style={{ backgroundColor: task.state.color }}
+                      />
+                    )}
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {statuses.map(([v, label]) => (
-                      <SelectItem key={v} value={v}>
+                    {projectStates.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
                         <span className="flex items-center gap-2">
-                          <span className={cn("inline-block h-2 w-2 rounded-full", STATUS_COLOR[v])} />
-                          {label}
+                          <span
+                            className="inline-block h-2 w-2 rounded-full"
+                            style={{ backgroundColor: s.color }}
+                          />
+                          {s.name}
                         </span>
                       </SelectItem>
                     ))}
@@ -458,15 +480,11 @@ export function TaskDetailPanel({ orgId, projectId }: TaskDetailPanelProps) {
               {/* Start Date */}
               <PropRow icon={CalendarDays} label="Start date">
                 {canEdit ? (
-                  <input
-                    type="date"
-                    value={task.start_date ? task.start_date.slice(0, 10) : ""}
-                    className="h-7 rounded border-0 bg-transparent text-xs px-1 hover:bg-accent focus:ring-1 focus:ring-ring focus:outline-none"
-                    onChange={(e) => {
-                      const val = e.target.value ? new Date(e.target.value).toISOString() : null
-                      handlePropChange({ start_date: val })
-                    }}
-                    disabled={isUpdating}
+                  <DatePicker
+                    value={task.start_date}
+                    onChange={(v) => handlePropChange({ start_date: v })}
+                    placeholder="Set start date"
+                    className="h-7 text-xs border-0 bg-transparent shadow-none px-1 hover:bg-accent"
                   />
                 ) : (
                   <span className="text-xs px-1">
@@ -478,15 +496,11 @@ export function TaskDetailPanel({ orgId, projectId }: TaskDetailPanelProps) {
               {/* Due Date */}
               <PropRow icon={CalendarDays} label="Due date">
                 {canEdit ? (
-                  <input
-                    type="date"
-                    value={task.due_date ? task.due_date.slice(0, 10) : ""}
-                    className="h-7 rounded border-0 bg-transparent text-xs px-1 hover:bg-accent focus:ring-1 focus:ring-ring focus:outline-none"
-                    onChange={(e) => {
-                      const val = e.target.value ? new Date(e.target.value).toISOString() : null
-                      handlePropChange({ due_date: val })
-                    }}
-                    disabled={isUpdating}
+                  <DatePicker
+                    value={task.due_date}
+                    onChange={(v) => handlePropChange({ due_date: v })}
+                    placeholder="Set due date"
+                    className="h-7 text-xs border-0 bg-transparent shadow-none px-1 hover:bg-accent"
                   />
                 ) : (
                   <span className="text-xs px-1">
@@ -573,6 +587,29 @@ export function TaskDetailPanel({ orgId, projectId }: TaskDetailPanelProps) {
                   disabled={!canEdit}
                   compact
                 />
+              </PropRow>
+
+              <Separator className="my-2" />
+
+              {/* Watchers */}
+              <PropRow icon={Eye} label="Watchers">
+                <div className="flex items-center gap-1 flex-wrap">
+                  {watchers.map((w) => (
+                    <Avatar key={w.user_id} className="h-5 w-5" title={w.full_name ?? w.email}>
+                      <AvatarFallback className="text-[10px]">
+                        {initials(w.full_name ?? w.email)}
+                      </AvatarFallback>
+                    </Avatar>
+                  ))}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs gap-1 px-1.5"
+                    onClick={() => isWatching ? unwatchTask.mutate() : watchTask.mutate()}
+                  >
+                    {isWatching ? <><EyeOff className="h-3 w-3" /> Unwatch</> : <><Eye className="h-3 w-3" /> Watch</>}
+                  </Button>
+                </div>
               </PropRow>
 
               <Separator className="my-2" />

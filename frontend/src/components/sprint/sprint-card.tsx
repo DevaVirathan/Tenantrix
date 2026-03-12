@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { format } from "date-fns"
 import {
   ChevronDown, ChevronRight, Play, Square, Trash2, MoreHorizontal,
@@ -15,6 +16,22 @@ import type { Sprint } from "@/types/sprint"
 import type { Task } from "@/types/task"
 import { TASK_STATUS_LABELS } from "@/types/task"
 import { cn } from "@/lib/utils"
+
+function StateChip({ task }: { task: Task }) {
+  if (task.state) {
+    return (
+      <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: task.state.color }} />
+        {task.state.name}
+      </span>
+    )
+  }
+  return (
+    <Badge variant="outline" className="text-xs shrink-0">
+      {TASK_STATUS_LABELS[task.status]}
+    </Badge>
+  )
+}
 
 interface Props {
   sprint: Sprint
@@ -36,6 +53,7 @@ export function SprintCard({ sprint, tasks, orgId, projectId, expanded, onToggle
   const openTaskPanel = useAppStore((s) => s.openTaskPanel)
   const { mutate: updateSprint } = useUpdateSprint(orgId, projectId)
   const { mutate: deleteSprint } = useDeleteSprint(orgId, projectId)
+  const [dragOver, setDragOver] = useState(false)
 
   const progress = sprint.task_count > 0
     ? Math.round((sprint.done_count / sprint.task_count) * 100)
@@ -58,7 +76,17 @@ export function SprintCard({ sprint, tasks, orgId, projectId, expanded, onToggle
   }
 
   return (
-    <div className="rounded-lg border bg-card">
+    <div
+      className={cn("rounded-lg border bg-card transition-colors", dragOver && "ring-2 ring-primary/40")}
+      onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault()
+        setDragOver(false)
+        const taskId = e.dataTransfer.getData("text/task-id")
+        if (taskId && onMoveTask) onMoveTask(taskId, sprint.id)
+      }}
+    >
       {/* Header */}
       <div
         className="flex items-center gap-2 px-4 py-3 cursor-pointer select-none"
@@ -124,14 +152,14 @@ export function SprintCard({ sprint, tasks, orgId, projectId, expanded, onToggle
           {tasks.map((task) => (
             <div
               key={task.id}
-              className="flex items-center gap-3 px-4 py-2 hover:bg-accent/50 cursor-pointer text-sm"
+              draggable
+              onDragStart={(e) => { e.dataTransfer.setData("text/task-id", task.id); e.dataTransfer.effectAllowed = "move" }}
+              className="flex items-center gap-3 px-4 py-2 hover:bg-accent/50 cursor-grab active:cursor-grabbing text-sm"
               onClick={() => openTaskPanel(task.id)}
             >
               <IssueTypeIcon type={task.issue_type} className="h-4 w-4 shrink-0" />
               <span className="flex-1 truncate">{task.title}</span>
-              <Badge variant="outline" className="text-xs">
-                {TASK_STATUS_LABELS[task.status]}
-              </Badge>
+              <StateChip task={task} />
               {task.story_points != null && (
                 <span className="text-xs text-muted-foreground">{task.story_points} pts</span>
               )}

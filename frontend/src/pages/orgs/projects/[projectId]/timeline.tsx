@@ -130,9 +130,9 @@ export function TimelineViewPage() {
                 <div
                   className={cn(
                     "absolute top-1 h-6 rounded-full cursor-pointer flex items-center px-2 text-[10px] text-white font-medium truncate",
-                    STATUS_COLORS[task.status] ?? "bg-gray-400",
+                    task.state?.color ? "" : (STATUS_COLORS[task.status] ?? "bg-gray-400"),
                   )}
-                  style={barStyle}
+                  style={{ ...barStyle, ...(task.state?.color ? { backgroundColor: task.state.color } : {}) }}
                   onClick={() => openTaskPanel(task.id)}
                   title={`${task.title} — ${getMemberName(task.assignee_user_id)}`}
                 >

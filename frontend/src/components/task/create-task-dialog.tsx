@@ -15,38 +15,66 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { AssigneePicker } from "./assignee-picker"
 import { PriorityIcon } from "./priority-icon"
+import { RichTextEditor } from "@/components/shared/rich-text-editor"
+import { DatePicker } from "@/components/shared/date-picker"
 import { createTaskSchema, type CreateTaskValues } from "@/validations/task.schema"
 import { useCreateTask } from "@/hooks/use-tasks"
-import type { TaskStatus, IssueType } from "@/types/task"
-import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS, ISSUE_TYPE_LABELS } from "@/types/task"
+import { useProjectStates } from "@/hooks/use-project-states"
+import { useAppStore } from "@/store/app-store"
+import type { IssueType } from "@/types/task"
+import { TASK_PRIORITY_LABELS, ISSUE_TYPE_LABELS } from "@/types/task"
 import { IssueTypeIcon } from "./issue-type-icon"
 
 interface CreateTaskDialogProps {
   orgId: string
   projectId: string
-  defaultStatus?: TaskStatus
+  defaultStateId?: string
   children: React.ReactNode
 }
 
-export function CreateTaskDialog({ orgId, projectId, defaultStatus = "todo", children }: CreateTaskDialogProps) {
-  const [open, setOpen] = useState(false)
+export function CreateTaskDialog({ orgId, projectId, defaultStateId, children }: CreateTaskDialogProps) {
+  const storeOpen = useAppStore((s) => s.createDialogOpen)
+  const setStoreOpen = useAppStore((s) => s.setCreateDialogOpen)
+  const [localOpen, setLocalOpen] = useState(false)
+  const open = localOpen || storeOpen
+  const setOpen = (v: boolean) => { setLocalOpen(v); setStoreOpen(v) }
   const { mutate: createTask, isPending } = useCreateTask(orgId, projectId)
+  const { data: states = [] } = useProjectStates(orgId, projectId)
+
+  // Find the default state: use provided defaultStateId, or project's default, or first state
+  const resolvedDefaultStateId =
+    defaultStateId ??
+    states.find((s) => s.is_default)?.id ??
+    states[0]?.id ??
+    ""
 
   const form = useForm<CreateTaskValues>({
     resolver: zodResolver(createTaskSchema),
     defaultValues: {
       title: "",
       description: "",
-      status: defaultStatus,
+      status: "todo",
       priority: "medium" as const,
       issue_type: "task" as const,
       assignee_user_id: null,
+      state_id: resolvedDefaultStateId || null,
       position: 0,
       story_points: null,
       start_date: null,
       due_date: null,
     },
   })
+
+  // Update state_id when dialog opens with a different default
+  function handleOpenChange(isOpen: boolean) {
+    setOpen(isOpen)
+    if (isOpen && resolvedDefaultStateId) {
+      form.setValue("state_id", resolvedDefaultStateId)
+    }
+    if (!isOpen) {
+      form.reset()
+    }
+  }
 
   function onSubmit(values: CreateTaskValues) {
     createTask(
@@ -55,11 +83,10 @@ export function CreateTaskDialog({ orgId, projectId, defaultStatus = "todo", chi
     )
   }
 
-  const statuses = Object.entries(TASK_STATUS_LABELS) as [TaskStatus, string][]
   const priorities = Object.keys(TASK_PRIORITY_LABELS) as (keyof typeof TASK_PRIORITY_LABELS)[]
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -85,25 +112,41 @@ export function CreateTaskDialog({ orgId, projectId, defaultStatus = "todo", chi
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Description <span className="text-muted-foreground">(optional)</span></FormLabel>
-                  <FormControl><Input placeholder="Describe the task…" {...field} /></FormControl>
+                  <FormControl>
+                    <RichTextEditor
+                      content={field.value ?? ""}
+                      onChange={field.onChange}
+                      placeholder="Describe the task…"
+                      minimal
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <div className="grid grid-cols-2 gap-3">
+              {/* State (dynamic) */}
               <FormField
                 control={form.control}
-                name="status"
+                name="state_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <FormLabel>State</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? ""}>
                       <FormControl>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {statuses.map(([v, label]) => (
-                          <SelectItem key={v} value={v}>{label}</SelectItem>
+                        {states.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            <span className="flex items-center gap-2">
+                              <span
+                                className="inline-block h-2 w-2 rounded-full shrink-0"
+                                style={{ backgroundColor: s.color }}
+                              />
+                              {s.name}
+                            </span>
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -192,10 +235,10 @@ export function CreateTaskDialog({ orgId, projectId, defaultStatus = "todo", chi
                   <FormItem>
                     <FormLabel>Start date <span className="text-muted-foreground">(optional)</span></FormLabel>
                     <FormControl>
-                      <Input
-                        type="date"
-                        value={field.value ? field.value.slice(0, 10) : ""}
-                        onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value).toISOString() : null)}
+                      <DatePicker
+                        value={field.value ?? null}
+                        onChange={field.onChange}
+                        placeholder="Start date"
                       />
                     </FormControl>
                     <FormMessage />
@@ -209,10 +252,10 @@ export function CreateTaskDialog({ orgId, projectId, defaultStatus = "todo", chi
                   <FormItem>
                     <FormLabel>Due date <span className="text-muted-foreground">(optional)</span></FormLabel>
                     <FormControl>
-                      <Input
-                        type="date"
-                        value={field.value ? field.value.slice(0, 10) : ""}
-                        onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value).toISOString() : null)}
+                      <DatePicker
+                        value={field.value ?? null}
+                        onChange={field.onChange}
+                        placeholder="Due date"
                       />
                     </FormControl>
                     <FormMessage />

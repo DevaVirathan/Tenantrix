@@ -11,11 +11,20 @@ export interface Label {
 
 export type LinkType = "blocks" | "is_blocked_by" | "relates_to" | "duplicate_of"
 
+export interface TaskStateInfo {
+  id: string
+  name: string
+  color: string
+  group: string
+}
+
 export interface TaskSummary {
   id: string
   title: string
   status: TaskStatus
   issue_type: IssueType
+  sequence_id?: number | null
+  state?: TaskStateInfo | null
 }
 
 export interface TaskLinkOut {
@@ -35,8 +44,11 @@ export interface Task {
   parent_task_id: string | null
   sprint_id: string | null
   module_id: string | null
+  state_id: string | null
+  sequence_id: number | null
   title: string
   description: string | null
+  state: TaskStateInfo | null
   status: TaskStatus
   priority: TaskPriority
   issue_type: IssueType
@@ -55,6 +67,7 @@ export interface Task {
 
 export interface TaskFilters {
   status?: TaskStatus
+  state_id?: string
   priority?: TaskPriority
   assignee_user_id?: string
   issue_type?: IssueType

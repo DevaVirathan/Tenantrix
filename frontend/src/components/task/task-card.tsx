@@ -14,6 +14,7 @@ import { format, isPast, isToday, addDays, isBefore } from "date-fns"
 interface TaskCardProps {
   task: Task
   orgId: string
+  projectIdentifier?: string | null
 }
 
 function initials(name: string) {
@@ -27,7 +28,7 @@ function dueDateColor(dueDateStr: string): string {
   return "text-muted-foreground"
 }
 
-export function TaskCard({ task, orgId }: TaskCardProps) {
+export function TaskCard({ task, orgId, projectIdentifier }: TaskCardProps) {
   const openTaskPanel = useAppStore((s) => s.openTaskPanel)
   const { data: members = [] } = useMembers(orgId)
 
@@ -66,6 +67,13 @@ export function TaskCard({ task, orgId }: TaskCardProps) {
       )}
       onClick={() => openTaskPanel(task.id)}
     >
+      {/* Issue ID */}
+      {projectIdentifier && task.sequence_id != null && (
+        <p className="text-[10px] text-muted-foreground font-medium mb-1">
+          {projectIdentifier}-{task.sequence_id}
+        </p>
+      )}
+
       {/* Issue type + Title */}
       <div className="flex items-start gap-1.5 mb-2">
         <IssueTypeIcon type={task.issue_type} className="h-4 w-4 mt-0.5 shrink-0" />
@@ -84,9 +92,17 @@ export function TaskCard({ task, orgId }: TaskCardProps) {
         </div>
       )}
 
-      {/* Footer: priority + due date + story points + assignee */}
+      {/* Footer: state + priority + due date + story points + assignee */}
       <div className="flex items-center justify-between mt-1">
         <div className="flex items-center gap-2">
+          {task.state && (
+            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+              <span
+                className="inline-block h-2 w-2 rounded-full shrink-0"
+                style={{ backgroundColor: task.state.color }}
+              />
+            </span>
+          )}
           <PriorityIcon priority={task.priority} showLabel />
           {task.due_date && (
             <span className={cn("flex items-center gap-0.5 text-[10px]", dueDateColor(task.due_date))}>

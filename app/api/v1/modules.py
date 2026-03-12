@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.api.deps import OrgAdmin, OrgMember
@@ -138,7 +138,7 @@ def delete_module(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Module not found.")
     # Unlink tasks from this module before deleting
     db.execute(
-        select(Task).where(Task.module_id == module.id).execution_options(synchronize_session="fetch")
+        update(Task).where(Task.module_id == module.id).values(module_id=None)
     )
     write_audit(db, organization_id=org.id, actor_user_id=_membership.user_id,
                 action="module.deleted", resource_type="module", resource_id=str(module_id))

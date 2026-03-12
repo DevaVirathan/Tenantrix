@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
@@ -11,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import OrgAdmin, OrgMember
 from app.db.session import get_db
 from app.models.project import Project
+from app.models.project_state import DEFAULT_PROJECT_STATES, ProjectState
 from app.schemas.project import ProjectCreateRequest, ProjectOut, ProjectUpdateRequest
 from app.services.audit import write_audit
 
@@ -42,14 +44,34 @@ def create_project(
 ) -> Project:
     """Create a new project in the organisation (MEMBER+ required)."""
     org, membership = org_member
+
+    # Generate identifier from project name (e.g., "DevOps" -> "DEVOP")
+    identifier = body.identifier if body.identifier else None
+    if not identifier:
+        # Auto-generate: take first 5 uppercase alphanumeric chars from name
+        cleaned = re.sub(r"[^A-Za-z0-9]", "", body.name).upper()[:5]
+        identifier = cleaned if cleaned else "PROJ"
+        # Ensure uniqueness by appending digits if needed
+        base = identifier
+        suffix = 1
+        while db.scalar(select(Project.id).where(Project.identifier == identifier)):
+            identifier = f"{base[:4]}{suffix}"
+            suffix += 1
+
     project = Project(
         organization_id=org.id,
         name=body.name,
         description=body.description,
+        identifier=identifier,
         status=body.status,
     )
     db.add(project)
     db.flush()
+
+    # Seed default project states
+    for state_def in DEFAULT_PROJECT_STATES:
+        db.add(ProjectState(project_id=project.id, **state_def))
+
     write_audit(
         db,
         organization_id=org.id,
@@ -57,7 +79,7 @@ def create_project(
         action="project.created",
         resource_type="project",
         resource_id=str(project.id),
-        metadata={"name": project.name},
+        metadata={"name": project.name, "identifier": identifier},
     )
     db.commit()
     db.refresh(project)

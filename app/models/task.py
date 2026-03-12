@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from app.models.comment import Comment
     from app.models.organization import Organization
     from app.models.project import Project
+    from app.models.project_state import ProjectState
     from app.models.module import Module
     from app.models.sprint import Sprint
     from app.models.task_label import TaskLabel
@@ -73,6 +74,13 @@ class Task(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
+    state_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("project_states.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    sequence_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[TaskStatus] = mapped_column(
@@ -121,6 +129,7 @@ class Task(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
     project: Mapped[Project] = relationship("Project", back_populates="tasks")
     assignee: Mapped[User | None] = relationship("User", foreign_keys=[assignee_user_id])
     created_by: Mapped[User | None] = relationship("User", foreign_keys=[created_by_user_id])
+    state: Mapped[ProjectState | None] = relationship("ProjectState")
     sprint: Mapped[Sprint | None] = relationship("Sprint", back_populates="tasks")
     module: Mapped[Module | None] = relationship("Module", back_populates="tasks")
     comments: Mapped[list[Comment]] = relationship("Comment", back_populates="task")

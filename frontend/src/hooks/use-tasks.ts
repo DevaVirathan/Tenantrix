@@ -20,6 +20,7 @@ async function extractDetail(err: unknown): Promise<string | null> {
 export function useTasks(orgId: string, projectId: string, filters?: TaskFilters) {
   const params: Record<string, string> = {}
   if (filters?.status) params.status = filters.status
+  if (filters?.state_id) params.state_id = filters.state_id
   if (filters?.priority) params.priority = filters.priority
   if (filters?.assignee_user_id) params.assignee_user_id = filters.assignee_user_id
   if (filters?.issue_type) params.issue_type = filters.issue_type
@@ -33,7 +34,7 @@ export function useTasks(orgId: string, projectId: string, filters?: TaskFilters
         .get(`organizations/${orgId}/projects/${projectId}/tasks`, { searchParams: params })
         .json<Task[]>(),
     enabled: !!orgId && !!projectId,
-    staleTime: 1000 * 30,
+    staleTime: 0,
   })
 }
 
@@ -43,7 +44,7 @@ export function useTask(orgId: string, taskId: string) {
     queryFn: () =>
       apiClient.get(`organizations/${orgId}/tasks/${taskId}`).json<Task>(),
     enabled: !!orgId && !!taskId,
-    staleTime: 1000 * 30,
+    staleTime: 0,
   })
 }
 
@@ -58,6 +59,7 @@ export function useCreateTask(orgId: string, projectId: string) {
         .json<Task>(),
     onSuccess: (task) => {
       qc.invalidateQueries({ queryKey: ["org", orgId, "project", projectId, "tasks"] })
+      qc.invalidateQueries({ queryKey: ["org", orgId, "project", projectId, "sprints"] })
       toast.success(`Task "${task.title}" created`)
     },
     onError: async (err: unknown) => {
@@ -76,6 +78,7 @@ export function useUpdateTask(orgId: string, projectId: string) {
     onSuccess: (task) => {
       qc.setQueryData(queryKeys.task(orgId, task.id), task)
       qc.invalidateQueries({ queryKey: ["org", orgId, "project", projectId, "tasks"] })
+      qc.invalidateQueries({ queryKey: ["org", orgId, "project", projectId, "sprints"] })
       qc.invalidateQueries({ queryKey: queryKeys.taskActivity(orgId, task.id) })
     },
     onError: async (err: unknown) => {
@@ -92,10 +95,29 @@ export function useDeleteTask(orgId: string, projectId: string) {
       apiClient.delete(`organizations/${orgId}/tasks/${taskId}`).then(() => undefined),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["org", orgId, "project", projectId, "tasks"] })
+      qc.invalidateQueries({ queryKey: ["org", orgId, "project", projectId, "sprints"] })
       toast.success("Task deleted")
     },
     onError: async (err: unknown) => {
       toast.error((await extractDetail(err)) ?? "Failed to delete task")
+    },
+  })
+}
+
+export function useBulkUpdateTasks(orgId: string, projectId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { task_ids: string[]; updates: Record<string, unknown> }) =>
+      apiClient
+        .post(`organizations/${orgId}/projects/${projectId}/tasks/bulk-update`, { json: data })
+        .json<{ updated_count: number }>(),
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: ["org", orgId, "project", projectId, "tasks"] })
+      qc.invalidateQueries({ queryKey: ["org", orgId, "project", projectId, "sprints"] })
+      toast.success(`${result.updated_count} tasks updated`)
+    },
+    onError: async (err: unknown) => {
+      toast.error((await extractDetail(err)) ?? "Failed to bulk update tasks")
     },
   })
 }
