@@ -62,8 +62,9 @@ export function TaskCard({ task, orgId, projectIdentifier }: TaskCardProps) {
       {...listeners}
       className={cn(
         "group rounded-md border bg-card p-3 shadow-sm cursor-grab active:cursor-grabbing",
-        "hover:border-primary/50 transition-colors select-none",
-        isDragging && "opacity-50 ring-2 ring-primary/30"
+        "transition-all duration-200 select-none",
+        "hover:border-primary/30 dark:hover:shadow-[0_0_10px_var(--neon-glow-spread)]",
+        isDragging && "opacity-50 ring-2 ring-primary/30 dark:ring-primary/40"
       )}
       onClick={() => openTaskPanel(task.id)}
     >

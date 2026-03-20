@@ -74,12 +74,12 @@ export function TopBar() {
   const { theme, toggleTheme } = useTheme()
 
   return (
-    <header className="h-12 border-b border-border bg-background/95 backdrop-blur-sm flex items-center px-4 gap-3 sticky top-0 z-40">
+    <header className="h-12 border-b border-border bg-background/80 backdrop-blur-md flex items-center px-4 gap-3 sticky top-0 z-40 dark:bg-background/70 dark:border-border/60">
       {/* Mobile hamburger */}
       <MobileSidebar />
 
-      {/* App name */}
-      <Link to="/orgs" className="font-semibold text-sm text-foreground shrink-0">
+      {/* App name with neon accent */}
+      <Link to="/orgs" className="font-bold text-sm tracking-tight shrink-0 text-primary transition-colors hover:text-primary/80">
         Tenantrix
       </Link>
 

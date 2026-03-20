@@ -52,14 +52,14 @@ export function OrgDashboardPage() {
     <div className="max-w-4xl space-y-8">
       {/* Greeting */}
       <div className="space-y-1">
-        <h1 className="text-3xl font-bold">{getGreeting()}, {firstName} 👋</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{getGreeting()}, {firstName}</h1>
         <p className="text-muted-foreground text-sm">{getDayString()}</p>
       </div>
 
       {/* Org identity row */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 dark:bg-primary/15 dark:shadow-[0_0_12px_var(--neon-glow-spread)]">
             <Building2 className="h-6 w-6 text-primary" />
           </div>
           <div>
@@ -79,7 +79,7 @@ export function OrgDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Projects</CardTitle>
-            <FolderKanban className="h-4 w-4 text-muted-foreground" />
+            <FolderKanban className="h-4 w-4 text-primary/60" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{projects?.length ?? "—"}</div>
@@ -89,7 +89,7 @@ export function OrgDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Members</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users className="h-4 w-4 text-primary/60" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{members?.length ?? "—"}</div>
@@ -99,7 +99,7 @@ export function OrgDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Pending Invites</CardTitle>
-            <Mail className="h-4 w-4 text-muted-foreground" />
+            <Mail className="h-4 w-4 text-primary/60" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{pendingInvites.length}</div>
@@ -109,7 +109,7 @@ export function OrgDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Created</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <Building2 className="h-4 w-4 text-primary/60" />
           </CardHeader>
           <CardContent>
             <div className="text-sm font-medium">
@@ -119,7 +119,7 @@ export function OrgDashboardPage() {
         </Card>
       </div>
 
-      <Separator />
+      <Separator className="dark:opacity-50" />
 
       {/* Recent projects */}
       {projects && projects.length > 0 && (
@@ -137,7 +137,7 @@ export function OrgDashboardPage() {
               <Link
                 key={project.id}
                 to={`/orgs/${orgId}/projects/${project.id}/board`}
-                className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 hover:bg-accent/50 transition-colors group"
+                className="flex items-center justify-between rounded-lg border bg-card px-4 py-3 transition-all duration-200 group hover:bg-accent/50 dark:hover:border-primary/20 dark:hover:shadow-[0_0_10px_var(--neon-glow-spread)]"
               >
                 <div className="min-w-0">
                   <p className="font-medium text-sm truncate">{project.name}</p>

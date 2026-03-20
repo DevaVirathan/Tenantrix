@@ -26,7 +26,7 @@ export function KanbanColumn({ state, tasks, orgId, projectId, projectIdentifier
     <div className="flex flex-col min-w-65 flex-1">
       {/* Column header */}
       <div
-        className="rounded-t-lg border-t-2 bg-muted/40 px-3 py-2 flex items-center justify-between"
+        className="rounded-t-lg border-t-2 bg-muted/40 dark:bg-muted/30 px-3 py-2 flex items-center justify-between"
         style={{ borderTopColor: state.color }}
       >
         <div className="flex items-center gap-2">
@@ -35,7 +35,7 @@ export function KanbanColumn({ state, tasks, orgId, projectId, projectIdentifier
             style={{ backgroundColor: state.color }}
           />
           <span className="text-sm font-semibold">{state.name}</span>
-          <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground font-medium">
+          <span className="rounded-full bg-muted dark:bg-primary/10 px-1.5 py-0.5 text-xs text-muted-foreground dark:text-primary/70 font-medium">
             {tasks.length}
           </span>
         </div>
@@ -50,8 +50,10 @@ export function KanbanColumn({ state, tasks, orgId, projectId, projectIdentifier
       <div
         ref={setNodeRef}
         className={cn(
-          "flex-1 rounded-b-lg border border-t-0 p-2 space-y-2 min-h-50 transition-colors",
-          isOver ? "bg-primary/5 border-primary/30" : "bg-muted/20 border-border"
+          "flex-1 rounded-b-lg border border-t-0 p-2 space-y-2 min-h-50 transition-all duration-200",
+          isOver
+            ? "bg-primary/5 border-primary/30 dark:bg-primary/8 dark:shadow-[inset_0_0_20px_var(--neon-glow-spread)]"
+            : "bg-muted/20 dark:bg-muted/10 border-border"
         )}
       >
         {isLoading ? (
@@ -69,7 +71,7 @@ export function KanbanColumn({ state, tasks, orgId, projectId, projectIdentifier
 
         {!isLoading && tasks.length === 0 && (
           <CreateTaskDialog orgId={orgId} projectId={projectId} defaultStateId={state.id}>
-            <button className="w-full rounded border border-dashed border-border py-2 text-xs text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors">
+            <button className="w-full rounded border border-dashed border-border py-2 text-xs text-muted-foreground hover:border-primary/40 hover:text-primary transition-all duration-200">
               + Add task
             </button>
           </CreateTaskDialog>

@@ -91,14 +91,14 @@ export function CommandPalette() {
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setQuery("") }}>
       <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden" aria-label="Search tasks and projects">
-        <div className="flex items-center border-b px-3">
-          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+        <div className="flex items-center border-b border-border/60 px-3">
+          <Search className="h-4 w-4 text-primary/60 shrink-0" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search tasks, projects…"
-            className="border-0 shadow-none focus-visible:ring-0 h-11"
+            placeholder="Search tasks, projects..."
+            className="border-0 shadow-none focus-visible:ring-0 focus-visible:shadow-none h-11"
             autoFocus
           />
         </div>
@@ -115,8 +115,10 @@ export function CommandPalette() {
             <button
               key={`${result.type}-${result.id}`}
               className={cn(
-                "w-full flex items-center gap-3 px-4 py-2 text-sm text-left hover:bg-accent transition-colors",
-                idx === selectedIndex && "bg-accent",
+                "w-full flex items-center gap-3 px-4 py-2 text-sm text-left transition-colors",
+                idx === selectedIndex
+                  ? "bg-primary/10 dark:bg-primary/15 text-foreground"
+                  : "hover:bg-accent",
               )}
               onClick={() => handleSelect(result)}
               onMouseEnter={() => setSelectedIndex(idx)}
@@ -151,10 +153,10 @@ export function CommandPalette() {
             </button>
           ))}
         </div>
-        <div className="border-t px-3 py-2 text-[11px] text-muted-foreground flex items-center gap-3">
-          <span><kbd className="px-1 rounded bg-muted text-[10px]">↑↓</kbd> navigate</span>
-          <span><kbd className="px-1 rounded bg-muted text-[10px]">↵</kbd> select</span>
-          <span><kbd className="px-1 rounded bg-muted text-[10px]">esc</kbd> close</span>
+        <div className="border-t border-border/60 px-3 py-2 text-[11px] text-muted-foreground flex items-center gap-3">
+          <span><kbd className="px-1 rounded bg-muted dark:bg-primary/10 text-[10px]">↑↓</kbd> navigate</span>
+          <span><kbd className="px-1 rounded bg-muted dark:bg-primary/10 text-[10px]">↵</kbd> select</span>
+          <span><kbd className="px-1 rounded bg-muted dark:bg-primary/10 text-[10px]">esc</kbd> close</span>
         </div>
       </DialogContent>
     </Dialog>

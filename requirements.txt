@@ -26,3 +26,6 @@ bcrypt==3.2.2
 # Rate limiting
 slowapi==0.1.9
 limits==5.8.0
+
+# S3-compatible storage
+boto3==1.38.44

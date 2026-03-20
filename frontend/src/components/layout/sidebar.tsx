@@ -64,17 +64,17 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+      "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
       isActive
-        ? "bg-accent text-accent-foreground"
+        ? "bg-primary/10 text-primary dark:bg-primary/15 dark:text-primary dark:shadow-[inset_0_0_0_1px_oklch(0.75_0.17_255/15%)]"
         : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
     )
 
   const subNavClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+      "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-all duration-200",
       isActive
-        ? "bg-accent text-accent-foreground font-medium"
+        ? "bg-primary/10 text-primary font-medium dark:bg-primary/15 dark:text-primary"
         : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
     )
 
@@ -90,7 +90,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <>
-      <div className="border-b px-3 py-3">
+      <div className="border-b border-sidebar-border px-3 py-3">
         <OrgSwitcher />
       </div>
 
@@ -110,14 +110,14 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           ))}
 
           {/* Projects section */}
-          <div className="mt-2">
+          <div className="mt-4">
             <div className="flex items-center justify-between px-3 py-1.5">
               <NavLink
                 to={`/orgs/${orgId}/projects`}
                 className={cn(
                   "flex items-center gap-2 text-xs font-semibold uppercase tracking-wider transition-colors",
                   isProjectsActive && !activeProjectId
-                    ? "text-foreground"
+                    ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
                 )}
                 onClick={onNavigate}
@@ -137,9 +137,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                     <button
                       onClick={() => toggleProject(project.id)}
                       className={cn(
-                        "w-full flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors text-left",
+                        "w-full flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 text-left",
                         isActive
-                          ? "bg-accent text-accent-foreground"
+                          ? "bg-primary/10 text-primary dark:bg-primary/15 dark:text-primary"
                           : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                       )}
                     >
@@ -152,7 +152,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                     </button>
 
                     {expanded && (
-                      <div className="ml-4 flex flex-col gap-0.5 border-l pl-2.5 mt-0.5 mb-1">
+                      <div className="ml-4 flex flex-col gap-0.5 border-l border-primary/15 pl-2.5 mt-0.5 mb-1">
                         {projectViews.map((view) => (
                           <NavLink
                             key={view.to}
@@ -184,7 +184,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               {canCreateProject && projects.length === 0 && (
                 <NavLink
                   to={`/orgs/${orgId}/projects`}
-                  className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground"
+                  className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:text-primary transition-colors"
                   onClick={onNavigate}
                 >
                   + New project
@@ -203,7 +203,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 export function Sidebar() {
   return (
     <aside
-      className="hidden md:flex h-full w-56 shrink-0 flex-col border-r bg-sidebar"
+      className="hidden md:flex h-full w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar"
       role="navigation"
       aria-label="Main navigation"
     >

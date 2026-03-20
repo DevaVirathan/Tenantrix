@@ -17,11 +17,11 @@ export function ProjectCard({ project, orgId, view = "grid" }: ProjectCardProps)
   if (view === "list") {
     return (
       <div
-        className="flex items-center justify-between px-4 py-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer group"
+        className="flex items-center justify-between px-4 py-3 rounded-lg border bg-card transition-all duration-200 cursor-pointer group hover:bg-accent/50 dark:hover:border-primary/20 dark:hover:shadow-[0_0_10px_var(--neon-glow-spread)]"
         onClick={() => navigate(`/orgs/${orgId}/projects/${project.id}/board`)}
       >
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-sm">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/15 text-primary font-bold text-sm">
             {project.name[0]?.toUpperCase()}
           </div>
           <div className="min-w-0">
@@ -44,13 +44,13 @@ export function ProjectCard({ project, orgId, view = "grid" }: ProjectCardProps)
 
   return (
     <Card
-      className={cn("cursor-pointer hover:bg-accent/50 transition-all hover:shadow-sm group")}
+      className={cn("cursor-pointer group")}
       onClick={() => navigate(`/orgs/${orgId}/projects/${project.id}/board`)}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-base">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 dark:bg-primary/15 text-primary font-bold text-base transition-all duration-200 dark:group-hover:shadow-[0_0_10px_var(--neon-glow-spread)]">
               {project.name[0]?.toUpperCase()}
             </div>
             <p className="font-semibold text-base leading-tight line-clamp-1">
