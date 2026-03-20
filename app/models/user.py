@@ -21,6 +21,8 @@ class User(UUIDMixin, TimestampMixin, Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    avatar_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    theme_preference: Mapped[str | None] = mapped_column(String(20), nullable=True, default="system")
 
     # Relationships
     memberships: Mapped[list[Membership]] = relationship("Membership", back_populates="user")

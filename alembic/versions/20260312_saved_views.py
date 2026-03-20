@@ -1,7 +1,7 @@
 """create saved_views table
 
-Revision ID: a1b2c3d4e5f6
-Revises: f6a7b8c9d0e1
+Revision ID: n2o3p4q5r6s7
+Revises: m1n2o3p4q5r6
 Create Date: 2026-03-12 00:00:00.000000+00:00
 """
 from __future__ import annotations
@@ -13,8 +13,8 @@ from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
-revision: str = "a1b2c3d4e5f6"
-down_revision: str | None = "f6a7b8c9d0e1"
+revision: str = "n2o3p4q5r6s7"
+down_revision: str | None = "m1n2o3p4q5r6"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

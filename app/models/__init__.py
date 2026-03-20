@@ -7,6 +7,7 @@ from app.models.idempotency_key import IdempotencyKey
 from app.models.invite import Invite
 from app.models.label import Label
 from app.models.membership import Membership
+from app.models.notification_preference import NotificationPreference
 from app.models.organization import Organization
 from app.models.project import Project
 from app.models.refresh_token import RefreshToken
@@ -22,6 +23,7 @@ __all__ = [
     "Invite",
     "Label",
     "Membership",
+    "NotificationPreference",
     "Organization",
     "Project",
     "RefreshToken",

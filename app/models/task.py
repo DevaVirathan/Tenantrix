@@ -123,6 +123,9 @@ class Task(UUIDMixin, TimestampMixin, SoftDeleteMixin, Base):
         nullable=True,
         index=True,
     )
+    archived_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None, index=True,
+    )
 
     # Relationships
     organization: Mapped[Organization] = relationship("Organization")
