@@ -7,7 +7,7 @@ from fastapi import APIRouter
 from app.api.v1 import (
     analytics, attachments, audit_logs, auth, comments, csv_tasks, health,
     modules, notifications, organizations, project_states, projects,
-    saved_views, search, sprints, tasks, watchers, websocket,
+    rate_limits, saved_views, search, sprints, tasks, watchers, websocket,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -17,6 +17,9 @@ api_router.include_router(health.router)
 
 # Auth
 api_router.include_router(auth.router)
+
+# Rate Limiting & Quotas
+api_router.include_router(rate_limits.router)
 
 # M3 — Organisations
 api_router.include_router(organizations.router)

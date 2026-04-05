@@ -12,6 +12,10 @@ SQLAlchemy==2.0.48
 alembic==1.18.4
 psycopg2-binary==2.9.11
 
+# Cache & Redis
+redis==5.2.0
+aioredis==2.0.1
+
 # Validation & Settings
 pydantic==2.12.5
 pydantic-settings==2.13.1
@@ -29,3 +33,5 @@ limits==5.8.0
 
 # S3-compatible storage
 boto3==1.38.44
+redis==5.2.0
+aioredis==2.0.1

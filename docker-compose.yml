@@ -26,6 +26,24 @@ services:
       start_period: 10s
 
   # ---------------------------------------------------------------------------
+  # Redis — in-memory cache and session store
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6371:6371"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+  # ---------------------------------------------------------------------------
   # API — FastAPI application
   # ---------------------------------------------------------------------------
   api:
@@ -37,10 +55,13 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql://postgres:password@db:5432/tenantrix
+      REDIS_URL: redis://redis:6379/0
     ports:
       - "8000:8000"
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     volumes:
       # Mount source for hot reload in development
@@ -95,3 +116,4 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:

@@ -15,6 +15,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.limiter import limiter
+from app.core.redis import close_redis, init_redis
 from app.middleware.error_handler import (
     http_exception_handler,
     unhandled_exception_handler,
@@ -23,6 +24,7 @@ from app.middleware.error_handler import (
 from app.middleware.logging import StructuredLoggingMiddleware
 from app.middleware.request_id import RequestIDMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
+from app.middleware.tenant_ratelimit import TenantRateLimitMiddleware
 
 
 # --------------------------------------------------------------------------- #
@@ -31,9 +33,11 @@ from app.middleware.security_headers import SecurityHeadersMiddleware
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Run startup tasks before the app serves traffic, teardown after."""
-    # Startup — nothing to do in M0 beyond confirming DB is reachable
+    # Startup
+    await init_redis()
     yield
-    # Shutdown — nothing to do in M0
+    # Shutdown
+    await close_redis()
 
 
 # --------------------------------------------------------------------------- #
@@ -55,7 +59,8 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------ #
     # NOTE: Starlette processes middleware in reverse-add order.
     # Desired execution order (outermost → innermost):
-    #   RequestID → SecurityHeaders → Logging → CORS → Rate-limit → Router
+    #   RequestID → SecurityHeaders → TenantRateLimit → Logging → CORS → 
+    #   Rate-limit → Router
     # So we add them last-first:
     app.add_middleware(
         CORSMiddleware,
@@ -65,6 +70,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.add_middleware(StructuredLoggingMiddleware)
+    app.add_middleware(TenantRateLimitMiddleware)
     app.add_middleware(SecurityHeadersMiddleware, environment=settings.ENVIRONMENT)
     app.add_middleware(RequestIDMiddleware)
 

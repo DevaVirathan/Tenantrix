@@ -85,6 +85,37 @@ class Settings(BaseSettings):
     S3_BUCKET: str = "tenantrix-attachments"
 
     # ------------------------------------------------------------------ #
+    # Redis (caching and session storage)                                  #
+    # ------------------------------------------------------------------ #
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    REDIS_PASSWORD: str = ""
+
+    # Can be set directly OR will be assembled from the components above
+    REDIS_URL: str = ""
+
+    @model_validator(mode="after")
+    def assemble_redis_url(self) -> Settings:
+        """Build REDIS_URL from parts if not explicitly provided."""
+        if not self.REDIS_URL:
+            if self.REDIS_PASSWORD:
+                self.REDIS_URL = (
+                    f"redis://:{self.REDIS_PASSWORD}"
+                    f"@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+                )
+            else:
+                self.REDIS_URL = (
+                    f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+                )
+        return self
+
+    # ------------------------------------------------------------------ #
+    # Cache settings                                                       #
+    # ------------------------------------------------------------------ #
+    CACHE_TTL_MINUTES: int = 60
+
+    # ------------------------------------------------------------------ #
     # CORS                                                                 #
     # ------------------------------------------------------------------ #
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://localhost:5174,http://localhost:5175"

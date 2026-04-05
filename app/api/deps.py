@@ -6,11 +6,12 @@ import uuid
 from typing import Annotated
 
 import jwt
-from fastapi import Depends, HTTPException, Path, status
+from fastapi import Depends, HTTPException, Path, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.core.security import decode_access_token
+from app.core.tenant_ratelimit import check_tenant_rate_limit
 from app.db.session import get_db
 from app.models.membership import Membership, OrgRole
 from app.models.organization import Organization
@@ -123,3 +124,97 @@ def require_org_role(minimum_role: OrgRole = OrgRole.MEMBER):
 OrgMember = Annotated[tuple[Organization, Membership], Depends(require_org_role(OrgRole.MEMBER))]
 OrgAdmin = Annotated[tuple[Organization, Membership], Depends(require_org_role(OrgRole.ADMIN))]
 OrgOwner = Annotated[tuple[Organization, Membership], Depends(require_org_role(OrgRole.OWNER))]
+
+
+# --------------------------------------------------------------------------- #
+# Tenant Rate Limiting Dependency                                              #
+# --------------------------------------------------------------------------- #
+
+
+def check_tenant_rate_limit_dependency(
+    request: Request,
+    org: Organization | None = None,
+) -> None:
+    """
+    Dependency to check tenant rate limits.
+
+    Can be used with or without an organization. If org is provided,
+    uses the org's subscription tier. Otherwise, defaults to free tier.
+
+    Raises HTTP 429 if rate limit exceeded.
+    """
+
+    async def _check_limit():
+        import asyncio
+        import time
+
+        tenant_id = str(org.id) if org else f"anonymous:{request.client.host}"
+        tier = org.subscription_tier if org else "free"
+
+        allowed, remaining, retry_after = await check_tenant_rate_limit(
+            tenant_id, tier, window_type="minute"
+        )
+
+        if not allowed:
+            retry_after_int = max(1, int(retry_after))
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Rate limit exceeded. Too many requests.",
+                headers={
+                    "Retry-After": str(retry_after_int),
+                    "X-RateLimit-Limit": "100" if tier == "free" else "1000",
+                    "X-RateLimit-Remaining": "0",
+                    "X-RateLimit-Reset": str(int(time.time()) + retry_after_int),
+                },
+            )
+
+    # Return async wrapper
+    return _check_limit()
+
+
+# For use in endpoints with organization context
+def require_org_and_rate_check(minimum_role: OrgRole = OrgRole.MEMBER):
+    """
+    Returns a dependency that:
+      1. Verifies org membership and role (like require_org_role)
+      2. Checks tenant rate limits
+      3. Returns the (org, membership) tuple
+    """
+
+    def _dep(
+        org_id: uuid.UUID = Path(...),  # noqa: B008
+        current_user: User = Depends(get_current_user),  # noqa: B008
+        db: Session = Depends(get_db),  # noqa: B008
+        request: Request = Depends(),  # noqa: B008
+    ) -> tuple[Organization, Membership]:
+        org = db.get(Organization, org_id)
+        if org is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Organisation not found."
+            )
+
+        membership = (
+            db.query(Membership).filter_by(organization_id=org_id, user_id=current_user.id).first()
+        )
+        if membership is None or membership.status != "active":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Not a member of this organisation."
+            )
+
+        if _ROLE_RANK[membership.role] < _ROLE_RANK[minimum_role]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Requires at least {minimum_role} role.",
+            )
+
+        # Check tenant rate limit
+        import asyncio
+
+        loop = asyncio.get_event_loop()
+        asyncio.run_coroutine_threadsafe(
+            check_tenant_rate_limit_dependency(request, org), loop
+        )
+
+        return org, membership
+
+    return _dep
